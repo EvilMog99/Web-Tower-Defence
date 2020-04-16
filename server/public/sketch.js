@@ -531,6 +531,7 @@ function updateFromServer(data) {
       if (tempData.buildingAnimation !== undefined) allTiles[tempData.gridX][tempData.gridY].buildingAnimation = tempData.buildingAnimation;
     }
     if (tempData.infectionPercent !== undefined) allTiles[tempData.gridX][tempData.gridY].setInfection(tempData.infectionPercent);
+    if (tempData.electricity !== undefined) allTiles[tempData.gridX][tempData.gridY].electricity = tempData.electricity;
     //if (tempData.justCured !== undefined) ;//wheather to run curing animation
   }
 }

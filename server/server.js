@@ -31,7 +31,8 @@ app.get('/', (req, res) => {
 });
 
 console.log("Socket server is running");
-var timer;
+var gameTimer;
+var cableTimer;
 var retData;
 var updateX = 0;
 
@@ -49,7 +50,19 @@ var tileWidth = 100;
 var tileHeight = 100;
 var allTiles = [];
 var allProjectiles = [];
-
+var allCables = [];//special array to process cables faster than other tiles
+var allCablesRemoveRequests = [];
+function addToAllCables(tile) {
+  allCables.push(tile);
+}
+function removeFromAllCables(tile) {
+  for (var i = 0; i < allCables.length; i++) {
+    if (allCables[i].x == tile.x && allCables[i].y == tile.y) {
+      allCables.splice(i, 1);
+      //keep searching through array incase there are multiple
+    }
+  }
+}
 
 var tileUpdateX = 0;
 var tileUpdateY = 0;
@@ -192,6 +205,19 @@ function newConnection(socket) {
     socket.broadcast.emit('mouse', data);
     //io.sockets.emit('mouse', data);//sends to all clients including the client that sent the message
   }*/
+}
+
+function cableUpdate() {
+  for (var i = 0; i < allCables.length; i++) {
+    allCables[i].shareElectricity();
+  }
+  //if cable tiles requested to be removed?
+  if (allCablesRemoveRequests.length > 0) {
+    for (var i = 0; i < allCablesRemoveRequests.length; i++) {
+      removeFromAllCables(allCablesRemoveRequests[i]);
+    }
+    allCablesRemoveRequests = [];
+  }
 }
 
 function timedUpdate() {
@@ -507,7 +533,8 @@ class Player {
 function createProjectile(projId, tile) {
   console.log('Try to create projectile');
   var tempTile;
-  var foundTarget = false;
+  var foundTarget = false;//for tiles that take priority like bacteria
+  var foundLessaTarget = false;//for targets that don't take priority like infection
   var targetX = ProjectileRange;
   var targetY = ProjectileRange;
   //set a random direction for search to go in
@@ -524,12 +551,16 @@ function createProjectile(projId, tile) {
         if (projId == 0) {
           //if the floor is infection
           if (tempTile.floorId == 3) {
-            //console.log('Tile x: ' + x + ' y: ' + y + ' Looked at');
             targetX = x;
             targetY = y;
             foundTarget = true;
           }
-          //else console.log('Tile x: ' + x + ' y: ' + y + ' Not Bacteria');
+          //test for infection but only if an important target hasn't been found
+          else if (!foundTarget && tempTile.infection > 0) {
+            foundLessaTarget = true;
+            targetX = x;
+            targetY = y;
+          }
         }
         else if (projId == 1) {
           //if the building exists and belongs to another player
@@ -552,13 +583,12 @@ function createProjectile(projId, tile) {
           }
         }
       }
-      //else console.log('Tile x: ' + x + ' y: ' + y + ' Already targeted');
       //}
     }
   }
 
   //if a target was found?
-  if (foundTarget) {
+  if (foundTarget || foundLessaTarget) {
     allProjectiles.push(new Projectile(projId, tile.x, tile.y, tile.x + targetX, tile.y + targetY));
     getTileIndexed(tile.x + targetX, tile.y + targetY).projTargeted = true;
     console.log('created projectile');
@@ -645,7 +675,6 @@ class Tile {
     this.buildingAnimation = 0;
     this.buildingOwner = 0;
     this.buildingMakeProjectileTimer = 100;
-    this.buildingElectricity = 0;
     this.infection = 0;
     this.x = x;
     this.y = y;
@@ -653,6 +682,8 @@ class Tile {
     this.infectionMax = infectLv1;//number infection must reach before tile can be changed
     this.justCured = false;
     this.projTargeted = false;//if false it isn't targeted by any projectiles
+    this.electricity = 0;
+    this.canShareElectricity = false;
 
     //temp variables
     this.tempNeighbourTiles;
@@ -711,24 +742,33 @@ class Tile {
       break;
 
       case 0: //Anti Bacteria Turret
+      this.shareElectricity();
       this.electricityToProjectiles(2);
       this.updateProjectileCreationState(0);
+      this.infection--;//de-infect self over time
       break;
 
       case 1: //Anti Player Turret
+      shareElectricity();
       this.electricityToProjectiles(3);
       this.updateProjectileCreationState(1);
       break;
 
       case 2: //Mining Turret
+      shareElectricity();
       this.electricityToProjectiles(1);
       this.updateProjectileCreationState(2);
       break;
 
       case 3: //Cables
+      this.shareElectricity();
       break;
 
       case 4: //Solar panel
+      this.electricity += 40;
+      this.testElectricityMax(1000);
+      this.shareElectricity();
+      //console.log('Solar panel power: ' + this.electricity);
       break;
 
       case 5: //Coal Plant
@@ -738,10 +778,18 @@ class Tile {
     }
   }
 
+  testElectricityMax(max) {
+    if (this.electricity > max) {
+      this.electricity = max;
+    }
+  }
+
   electricityToProjectiles(requiredElectricity) {
-    if (this.buildingElectricity > requiredElectricity || true) {
+    console.log('electricity: ' + this.electricity);
+    console.log('proj timer: ' + this.buildingMakeProjectileTimer);
+    if (this.electricity > requiredElectricity) {
       if (this.buildingMakeProjectileTimer < BuildProjectileTimerMax) {
-        this.buildingElectricity -= requiredElectricity;
+        this.electricity -= requiredElectricity;
         this.buildingMakeProjectileTimer++;
       }
     }
@@ -749,8 +797,19 @@ class Tile {
 
   updateProjectileCreationState(projId) {
     if (this.buildingMakeProjectileTimer >= BuildProjectileTimerMax) {
+      console.log('try to make projectile');
       if (createProjectile(projId, this))//if a projectile was created?
         this.buildingMakeProjectileTimer = 0;//reset timer
+    }
+  }
+
+  shareElectricity() {
+    this.tempNeighbourTiles = getNeighbouringTiles(this.x, this.y);
+    for (var i = 0; i < this.tempNeighbourTiles.length; i++) {
+      if (this.tempNeighbourTiles[i].canShareElectricity) {
+        this.electricity = Math.floor((this.electricity / 2) + (this.tempNeighbourTiles[i].electricity / 2));
+        this.tempNeighbourTiles[i].electricity = this.electricity;
+      }
     }
   }
 
@@ -769,17 +828,31 @@ class Tile {
   }
 
   setBuildingId(id, owner) {
+    //add to allCables if it is a cable
+    if (id == 3) {
+      addToAllCables(this);
+    }
+    //if the buildingId about to be overwritten is cables?
+    else if (this.buildingId == 3) {
+      allCablesRemoveRequests.push(this);
+    }
     this.buildingId = id;
     this.buildingAnimation = 0;
     this.buildingOwner = owner;
     this.buildingMakeProjectileTimer = 0;
-    this.buildingElectricity = 0;
+    this.electricity = 0;
+    if (id == 0 || id == 1 || id == 2 || id == 3 || id == 4 || id == 5) {
+      this.canShareElectricity = true;
+    }
+    else this.canShareElectricity = false;
   }
 
   cureBacteria() {
-    //if infected
+    this.infection = 0;//cure infection
+    //if is bacteria?
     if (this.floorId == 3) {
       this.setFloorId(0);
+      this.infection = 0;
       //random chance of spawning ore
       if (Math.random * 10 > 4)
         this.setBuildingId(spawnableBuildingIds[Math.floor(Math.random() * spawnableBuildingIds.length)], -1);
@@ -808,7 +881,8 @@ class Tile {
       buildingId: this.buildingId,
       buildingAniamtion: this.buildingAniamtion,
       infectionPercent: this.getInfectionPercent(),
-      justCured: this.justCured
+      justCured: this.justCured,
+      electricity: this.electricity
     };
   }
 }
@@ -818,4 +892,5 @@ class Tile {
 console.log('Finished Basic Setup');
 
 init();
-timer = setInterval(timedUpdate, 100);
+gameTimer = setInterval(timedUpdate, 100);
+cableTimer = setInterval(cableUpdate, 100);
