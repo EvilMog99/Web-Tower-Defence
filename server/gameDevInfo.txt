@@ -1,0 +1,42 @@
+Entity Indexes
+0     : Floor Tiles
+1     : Buildings
+
+Tile Floor Indexes
+0     : Dirt
+1     : Dirt with Seeds
+2     : Stone
+3     : Infection
+
+
+Tile Building Indexes
+-1    : No building
+0     : Anti Bacteria Turret - Used for basic attacks against infection
+1     : Anti Player Turret   -
+2     : Mining Turret        -
+3     : Cables            - Used to transport electricity
+4     : Solar Panels      - Used to create some electricity constantly in day light
+5     : Coal Plant       - Used to turn player's coal into electricity
+6     : Stone
+7     : Iron Ore
+8     : Copper Ore
+9     : Uranium Ore
+10    : Coal Ore
+
+
+Projectile Indexes
+0     : Anti Bacteria
+1     : Anti Player
+2     : Mining Obtaining
+3     : Mining Returning with Stone
+4     : Mining Returning with Iron
+5     : Mining Returning with Copper
+6     : Mining Returning with Uranium
+7     : Mining Returning with Coal
+
+Material Indexes
+0     : Stone
+1     : Iron
+2     : Copper
+3     : Uranium
+4     : Coal
