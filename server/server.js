@@ -101,6 +101,7 @@ var spawnableBuildingIds = [6, 6, 6, 6, 6, 7, 7, 8, 8, 9, 9, 9, 10];
 
 var BuildProjectileTimerMax = 1;
 var ProjectileRange = 8;
+var BuildingMaxHp = 100;
 
 //set event handler for new connection
 io.sockets.on('connection', newConnection);
@@ -249,7 +250,7 @@ function timedUpdate() {
 
     if (runProjRemove) {
       //will only remove 1 projectile at a time to safe gaurd against errors
-      console.log('try to delete projectile');
+      //console.log('try to delete projectile');
       for (var i = 0; i < allProjectiles.length; i++) {
         if (allProjectiles[i].id == -1) {
           //test to see if the turret that fired it wants to fire another
@@ -259,7 +260,7 @@ function timedUpdate() {
           }
           //splice projectile out of array
           allProjectiles.splice(i, 1);
-          console.log('deleted projectile');
+          //console.log('deleted projectile');
           break;
         }
       }
@@ -531,7 +532,6 @@ class Player {
 }
 
 function createProjectile(projId, tile) {
-  console.log('Try to create projectile');
   var tempTile;
   var foundTarget = false;//for tiles that take priority like bacteria
   var foundLessaTarget = false;//for targets that don't take priority like infection
@@ -544,54 +544,61 @@ function createProjectile(projId, tile) {
   //if (Math.random() * 100 > 50) directionY = -1;
   for (var x = -ProjectileRange * directionX; x < Math.abs(targetX) * directionX; x++) {
     for (var y = -ProjectileRange * directionY; y < Math.abs(targetY) * directionY; y++) {
-      //if (Math.abs(x) <= Math.abs(targetX) && Math.abs(y) <= Math.abs(targetY)) {
-      tempTile = getTileIndexed(tile.x + x, tile.y + y);
-      //if this tile isn't already targeted?
-      if (!tempTile.projTargeted) {
-        if (projId == 0) {
-          //if the floor is infection
-          if (tempTile.floorId == 3) {
-            targetX = x;
-            targetY = y;
-            foundTarget = true;
+      if (Math.abs(x) <= Math.abs(targetX) && Math.abs(y) <= Math.abs(targetY)) {
+        tempTile = getTileIndexed(tile.x + x, tile.y + y);
+        //if this tile isn't already targeted?
+        if (tempTile.projTargeted <= 0) {
+          if (projId == 0) {
+            //if the floor is infection
+            if (tempTile.floorId == 3) {
+              targetX = x;
+              targetY = y;
+              foundTarget = true;
+            }
+            //test for infection but only if an important target hasn't been found
+            else if (!foundTarget && tempTile.infection > 0) {
+              foundLessaTarget = true;
+              targetX = x;
+              targetY = y;
+            }
           }
-          //test for infection but only if an important target hasn't been found
-          else if (!foundTarget && tempTile.infection > 0) {
-            foundLessaTarget = true;
-            targetX = x;
-            targetY = y;
+          else if (projId == 1) {
+            //if the building exists and belongs to another player
+            if (tempTile.buildingId > -1 && tempTile.buildingOwner != -1 && tempTile.buildingOwner != tile.buildingOwner) {
+              targetX = x;
+              targetY = y;
+              //if this tile is an opposing Anti Player Turret it take priority
+              if (tempTile.buildingId == 1) {
+                foundTarget = true;
+              }
+              //else if an important target hasn't been found choose this one
+              else if (!foundTarget) {
+                foundLessaTarget = true;
+              }
+            }
           }
-        }
-        else if (projId == 1) {
-          //if the building exists and belongs to another player
-          if (tempTile.buildingId > -1 && tempTile.buildingOwner != -1 && tempTile.buildingOwner != tile.owner) {
-            targetX = x;
-            targetY = y;
-            foundTarget = true;
-          }
-        }
-        else if (projId == 2) {
-          //if it is an ore?
-          if ((tempTile.buildingId == 6 && testOreIsRequired(0, tile.owner))
-              || (tempTile.buildingId == 7 && testOreIsRequired(1, tile.owner))
-              || (tempTile.buildingId == 8  && testOreIsRequired(2, tile.owner))
-              || (tempTile.buildingId == 9 && testOreIsRequired(3, tile.owner))
-              || (tempTile.buildingId == 10 && testOreIsRequired(4, tile.owner))) {
-            targetX = x;
-            targetY = y;
-            foundTarget = true;
+          else if (projId == 2) {
+            //if it is an ore?
+            if ((tempTile.buildingId == 6 && testOreIsRequired(0, tile.owner))
+                || (tempTile.buildingId == 7 && testOreIsRequired(1, tile.owner))
+                || (tempTile.buildingId == 8  && testOreIsRequired(2, tile.owner))
+                || (tempTile.buildingId == 9 && testOreIsRequired(3, tile.owner))
+                || (tempTile.buildingId == 10 && testOreIsRequired(4, tile.owner))) {
+              targetX = x;
+              targetY = y;
+              foundTarget = true;
+            }
           }
         }
       }
-      //}
     }
   }
 
   //if a target was found?
   if (foundTarget || foundLessaTarget) {
     allProjectiles.push(new Projectile(projId, tile.x, tile.y, tile.x + targetX, tile.y + targetY));
-    getTileIndexed(tile.x + targetX, tile.y + targetY).projTargeted = true;
-    console.log('created projectile');
+    //Set tile so it can't be targeted again for another 2 rounds of processing
+    getTileIndexed(tile.x + targetX, tile.y + targetY).projTargeted = 2;
     return true;
   }
   return false;
@@ -638,7 +645,9 @@ class Projectile {
         break;
 
         case 1:// Anti Player
-        //to be added
+        getTileIndexed(this.targetX, this.targetY).takeDamage(40);
+        //add tile to list of tiles to be updated on clients
+        tileUpdate.push(getTileIndexed(this.targetX, this.targetY).createTileToSend());
         break;
 
         case 2:// Mining
@@ -675,13 +684,14 @@ class Tile {
     this.buildingAnimation = 0;
     this.buildingOwner = 0;
     this.buildingMakeProjectileTimer = 100;
+    this.buildingHp = 0;
     this.infection = 0;
     this.x = x;
     this.y = y;
     this.infection = 0;
     this.infectionMax = infectLv1;//number infection must reach before tile can be changed
     this.justCured = false;
-    this.projTargeted = false;//if false it isn't targeted by any projectiles
+    this.projTargeted = 0;//if 0 it isn't targeted by any projectiles
     this.electricity = 0;
     this.canShareElectricity = false;
 
@@ -691,6 +701,13 @@ class Tile {
 
   updateTile() {
     this.justCured = false;
+    if (this.projTargeted > 0) this.projTargeted--;
+    if (this.buildingHp <= 0) {
+      this.setBuildingId(-1, -1);
+    }
+    else if (this.buildingHp < BuildingMaxHp) {
+      this.buildingHp += 10;
+    }
     if (this.infection > this.infectionMax) {
       //if tiles isn't infected
       if (this.floorId != 3) {
@@ -743,20 +760,20 @@ class Tile {
 
       case 0: //Anti Bacteria Turret
       this.shareElectricity();
-      this.electricityToProjectiles(2);
+      this.electricityToProjectiles(5);
       this.updateProjectileCreationState(0);
       this.infection--;//de-infect self over time
       break;
 
       case 1: //Anti Player Turret
-      shareElectricity();
-      this.electricityToProjectiles(3);
+      this.shareElectricity();
+      this.electricityToProjectiles(5);
       this.updateProjectileCreationState(1);
       break;
 
       case 2: //Mining Turret
-      shareElectricity();
-      this.electricityToProjectiles(1);
+      this.shareElectricity();
+      this.electricityToProjectiles(5);
       this.updateProjectileCreationState(2);
       break;
 
@@ -778,6 +795,14 @@ class Tile {
     }
   }
 
+  takeDamage(damage) {
+    this.projTargeted = 0;
+    this.buildingHp -= damage;
+    if (this.buildingHp <= 0) {
+      this.setBuildingId(-1, -1);
+    }
+  }
+
   testElectricityMax(max) {
     if (this.electricity > max) {
       this.electricity = max;
@@ -785,8 +810,6 @@ class Tile {
   }
 
   electricityToProjectiles(requiredElectricity) {
-    console.log('electricity: ' + this.electricity);
-    console.log('proj timer: ' + this.buildingMakeProjectileTimer);
     if (this.electricity > requiredElectricity) {
       if (this.buildingMakeProjectileTimer < BuildProjectileTimerMax) {
         this.electricity -= requiredElectricity;
@@ -797,7 +820,6 @@ class Tile {
 
   updateProjectileCreationState(projId) {
     if (this.buildingMakeProjectileTimer >= BuildProjectileTimerMax) {
-      console.log('try to make projectile');
       if (createProjectile(projId, this))//if a projectile was created?
         this.buildingMakeProjectileTimer = 0;//reset timer
     }
@@ -807,7 +829,7 @@ class Tile {
     this.tempNeighbourTiles = getNeighbouringTiles(this.x, this.y);
     for (var i = 0; i < this.tempNeighbourTiles.length; i++) {
       if (this.tempNeighbourTiles[i].canShareElectricity) {
-        this.electricity = Math.floor((this.electricity / 2) + (this.tempNeighbourTiles[i].electricity / 2));
+        this.electricity = (this.electricity / 2) + (this.tempNeighbourTiles[i].electricity / 2);
         this.tempNeighbourTiles[i].electricity = this.electricity;
       }
     }
@@ -841,6 +863,9 @@ class Tile {
     this.buildingOwner = owner;
     this.buildingMakeProjectileTimer = 0;
     this.electricity = 0;
+    if (this.buildingId > -1) this.buildingHp = BuildingMaxHp;
+    else this.buildingHp = 0;
+
     if (id == 0 || id == 1 || id == 2 || id == 3 || id == 4 || id == 5) {
       this.canShareElectricity = true;
     }
