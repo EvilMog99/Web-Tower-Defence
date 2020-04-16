@@ -106,6 +106,8 @@ var buildingOffsetY = -12.5;
 var projectileWidth = 50;
 var projectileHeight = 50;
 
+var panel_gameMenu;
+
 //work out the start and end index of tiles to draw to the screen
 var maxX;
 var maxY;
@@ -259,7 +261,7 @@ function loadResources()
   sceneGame = new Scene(); allScenes[1] = sceneGame;
 
   //setup game right side panel
-  var panel_gameMenu = new GuiPanel(0, 325, 0, 250, 700, allPanelFrames);
+  panel_gameMenu = new GuiPanel(0, 325, 0, 250, 700, allPanelFrames);
   sceneGame.allGuiPanels[5].push(panel_gameMenu);
   var pGameMenu_button_Quit = new GuiButton(0, 0, 0, 0, -270, 240, 50, allButtonFrames, buttonClick_openMenu, -1, -1, 'Quit', 20);
   panel_gameMenu.allButtons.push(pGameMenu_button_Quit);
@@ -330,15 +332,15 @@ function loadResources()
   panel_gameInstructions.allButtons.push(pGameInstructions_button_instructText);
 
   panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, -220, 0, 0, allButtonFrames, -1, -1, -1
-    , 'Bacteria are taking over the world! \nYour goal is to fight it off using Anti Bacteria Turrets', 24));
+    , 'Bacteria are taking over the world! \nYour goal is to fight it off using Anti Bacteria Turrets', 20));
   panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, -120, 0, 0, allButtonFrames, -1, -1, -1
-    , 'Your resources are shown in the top panel next to their icons \nThese are used to pay for Buildings you place down', 24));
+    , 'Your resources are shown in the top panel next to their icons \nThese are used to pay for Buildings you place down \nYou can collect more by using Clear on the terrain or a Mining Turret', 20));
   panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, -20, 0, 0, allButtonFrames, -1, -1, -1
-    , 'Left click the buttons on the right hand panel to select the \nBuilding you want to buy. Then left click on the map to place them \n(The Building costs are shown below each button)', 24));
+    , 'Left click the buttons on the right hand panel to select the \nBuilding you want to buy. Then left click on the map to place them \n(The Building costs are shown below each button)', 20));
   panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, 80, 0, 0, allButtonFrames, -1, -1, -1
-    , 'All Turrets require electricity to work - \nUse Buildings like Solar Panels to generate electricity', 24));
+    , 'All Turrets require electricity to work - \nUse Buildings like Solar Panels to generate electricity', 20));
   panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, 180, 0, 0, allButtonFrames, -1, -1, -1
-    , 'Every Building conducts electricity slowly, \nbut to move it quickly you can connect your Buildings with Cables', 24));
+    , 'Every Building conducts electricity slowly, \nbut to move it quickly you can connect your Buildings with Cables', 20));
 }
 
 function getBuildngCostAsString(buildingId) {
@@ -683,7 +685,8 @@ function draw()
     var tempY;
     var tempTile;
     var tempTextureIndex;
-    for (var x = maxX; x > -maxX; x--) {
+    //draw game within the canvas (-Gui panel on rigth side of screen)
+    for (var x = maxX; x > -maxX + (panel_gameMenu.width / tileWidth); x--) {
       tempX = (x * tileWidth) + player.locX - (player.locX % tileWidth);
       for (var y = maxY; y > -maxY; y--) {
         tempY = (y * tileHeight) + player.locY - (player.locY % tileHeight);
