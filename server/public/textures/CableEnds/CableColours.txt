@@ -1,0 +1,19 @@
+0
+Wire Top: #FF7F27
+Wire Side: #F26100
+
+1
+Wire Top: #FFB027
+Wire Side: #F28100
+
+2
+Wire Top: #FFDB27
+Wire Side: #F29D00
+
+3
+Wire Top: #FFFF27
+Wire Side: #F2E200
+
+4
+Wire Top: #D4AF37
+Wire Side: #D4C237

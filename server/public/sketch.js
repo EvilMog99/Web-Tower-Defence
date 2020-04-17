@@ -75,7 +75,7 @@ var allRecipes = [
 
 //all buildings that can use cables
 var allCableBuildings = [0, 1, 2, 3, 4, 5];
-function testCbaleBuildings(buildingId) {
+function testCableBuildings(buildingId) {
   for (var i = 0; i < allCableBuildings.length; i++) {
     if (allCableBuildings[i] == buildingId) return true;
   }
@@ -91,10 +91,10 @@ var allTiles = [];
 var allProjectiles = [];
 var allInfectionAnimations = [];
 var allBuildingButtons = [];
-var cableEnd_up;
-var cableEnd_down;
-var cableEnd_left;
-var cableEnd_right;
+var cableEnd_up = [];
+var cableEnd_down = [];
+var cableEnd_left = [];
+var cableEnd_right = [];
 
 var wldWidth = 255;
 var wldHeight = 255;
@@ -103,8 +103,8 @@ var tileHeight = 100;
 var buildingWidth = 100;
 var buildingHeight = 125;
 var buildingOffsetY = -12.5;
-var projectileWidth = 50;
-var projectileHeight = 50;
+var projectileWidth = 40;
+var projectileHeight = 40;
 
 var panel_gameMenu;
 
@@ -210,7 +210,7 @@ function loadResources()
   allBuildingAnimations[0] = loadAnimation('Building', 0, [1, 1, 1, 1]);//Building 000
   allBuildingAnimations[1] = loadAnimation('Building', 1, [1]);//Building 001
   allBuildingAnimations[2] = loadAnimation('Building', 2, [1]);//Building 002
-  allBuildingAnimations[3] = loadAnimation('Building', 3, [1]);//Building 003
+  allBuildingAnimations[3] = loadAnimation('Building', 3, [1, 1, 1, 1, 1]);//Building 003
   allBuildingAnimations[4] = loadAnimation('Building', 4, [1]);//Building 004
   allBuildingAnimations[5] = loadAnimation('Building', 5, [1]);//Building 005
 
@@ -220,22 +220,22 @@ function loadResources()
   allBuildingAnimations[9] = loadAnimation('Building', 9, [1]);//Building 009
   allBuildingAnimations[10] = loadAnimation('Building', 10, [1]);//Building 010
 
-  //get cable ends
-  cableEnd_up = loadImage('textures/CableEnds/Up.png');
-  cableEnd_down = loadImage('textures/CableEnds/Down.png');
-  cableEnd_left = loadImage('textures/CableEnds/Left.png');
-  cableEnd_right = loadImage('textures/CableEnds/Right.png');
-
   //get all projectile sprites
   allProjectileAnimations = [];
   allProjectileAnimations[0] = loadImage('textures/Projectiles/P00/F00.png');
   allProjectileAnimations[1] = loadImage('textures/Projectiles/P01/F00.png');
   allProjectileAnimations[2] = loadImage('textures/Projectiles/P02/F00.png');
-  allProjectileAnimations[3] = loadImage('textures/Projectiles/P02/F00.png');
-  allProjectileAnimations[4] = loadImage('textures/Projectiles/P02/F00.png');
-  allProjectileAnimations[5] = loadImage('textures/Projectiles/P02/F00.png');
-  allProjectileAnimations[6] = loadImage('textures/Projectiles/P02/F00.png');
-  allProjectileAnimations[7] = loadImage('textures/Projectiles/P02/F00.png');
+  allProjectileAnimations[3] = loadImage('textures/Projectiles/P03/F00.png');
+  allProjectileAnimations[4] = loadImage('textures/Projectiles/P04/F00.png');
+  allProjectileAnimations[5] = loadImage('textures/Projectiles/P05/F00.png');
+  allProjectileAnimations[6] = loadImage('textures/Projectiles/P06/F00.png');
+  allProjectileAnimations[7] = loadImage('textures/Projectiles/P07/F00.png');
+
+  //get cable ends
+  cableEnd_up = getImageList('textures/CableEnds/', 'Up', 5);
+  cableEnd_down = getImageList('textures/CableEnds/', 'Down', 5);
+  cableEnd_left = getImageList('textures/CableEnds/', 'Left', 5);
+  cableEnd_right = getImageList('textures/CableEnds/', 'Right', 5);
 
   //!!!!!!!!Do same for characters later!
 
@@ -279,7 +279,7 @@ function loadResources()
   createBuildingButton(spacingX, spacingY, 0, 2, -1, 'Clear', 'Free', panel_gameMenu.allButtons, allBuildingButtons);
   createBuildingButton(spacingX, spacingY, 1, 3, 0, 'Anti Batteria Turret', getBuildngCostAsString(0), panel_gameMenu.allButtons, allBuildingButtons);
   createBuildingButton(spacingX, spacingY, 2, 4, 1, 'Anti Player Turret', getBuildngCostAsString(1), panel_gameMenu.allButtons, allBuildingButtons);
-  //createBuildingButton(spacingX, spacingY, 3, 5, 2, 'Mining Turret', getBuildngCostAsString(2), panel_gameMenu.allButtons, allBuildingButtons);
+  createBuildingButton(spacingX, spacingY, 3, 5, 2, 'Mining Turret', getBuildngCostAsString(2), panel_gameMenu.allButtons, allBuildingButtons);
   createBuildingButton(spacingX, spacingY, 4, 6, 3, 'Cables', getBuildngCostAsString(3), panel_gameMenu.allButtons, allBuildingButtons);
   createBuildingButton(spacingX, spacingY, 5, 7, 4, 'Solar Panel', getBuildngCostAsString(4), panel_gameMenu.allButtons, allBuildingButtons);
   //createBuildingButton(spacingX, spacingY, 6, 8, 5, 'Power Station', getBuildngCostAsString(5), panel_gameMenu.allButtons, allBuildingButtons);
@@ -334,7 +334,7 @@ function loadResources()
   panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, -220, 0, 0, allButtonFrames, -1, -1, -1
     , 'Bacteria are taking over the world! \nYour goal is to fight it off using Anti Bacteria Turrets', 20));
   panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, -120, 0, 0, allButtonFrames, -1, -1, -1
-    , 'Your resources are shown in the top panel next to their icons \nThese are used to pay for Buildings you place down \nYou can collect more by using Clear on the terrain or a Mining Turret', 20));
+    , 'Your resources are shown in the top panel next to their icons \nThese are used to pay for Buildings you place down \nYou can collect more by using Clear on the terrain', 20));
   panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, -20, 0, 0, allButtonFrames, -1, -1, -1
     , 'Left click the buttons on the right hand panel to select the \nBuilding you want to buy. Then left click on the map to place them \n(The Building costs are shown below each button)', 20));
   panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, 80, 0, 0, allButtonFrames, -1, -1, -1
@@ -550,7 +550,7 @@ function updateFromServer(data) {
       if (tempData.buildingAnimation !== undefined) allTiles[tempData.gridX][tempData.gridY].buildingAnimation = tempData.buildingAnimation;
     }
     if (tempData.infectionPercent !== undefined) allTiles[tempData.gridX][tempData.gridY].setInfection(tempData.infectionPercent);
-    if (tempData.electricity !== undefined) allTiles[tempData.gridX][tempData.gridY].electricity = tempData.electricity;
+    //if (tempData.electricity !== undefined) allTiles[tempData.gridX][tempData.gridY].electricity = tempData.electricity;
     //if (tempData.justCured !== undefined) ;//wheather to run curing animation
   }
 }
@@ -701,22 +701,23 @@ function draw()
           translate(0, buildingOffsetY, -0.0001);
           texture(getTexture(tempTile.buildingId, tempTile.buildingAnimation, tempTile.buildingFrame, allBuildingAnimations));
           plane(buildingWidth, buildingHeight);
+          //if this building is cables?
           if (tempTile.buildingId == 3) {
             //if this tile is cables - show connections to nearby buildings
-            if (testCbaleBuildings(getTile(tempX, tempY + tileWidth).buildingId)) {
-              texture(cableEnd_up);
+            if (testCableBuildings(getTile(tempX, tempY + tileWidth).buildingId)) {
+              texture(cableEnd_up[tempTile.buildingAnimation]);
               plane(buildingWidth, buildingHeight);
             }
-            if (testCbaleBuildings(getTile(tempX, tempY - tileWidth).buildingId)) {
-              texture(cableEnd_down);
+            if (testCableBuildings(getTile(tempX, tempY - tileWidth).buildingId)) {
+              texture(cableEnd_down[tempTile.buildingAnimation]);
               plane(buildingWidth, buildingHeight);
             }
-            if (testCbaleBuildings(getTile(tempX + tileHeight, tempY).buildingId)) {
-              texture(cableEnd_left);
+            if (testCableBuildings(getTile(tempX + tileHeight, tempY).buildingId)) {
+              texture(cableEnd_left[tempTile.buildingAnimation]);
               plane(buildingWidth, buildingHeight);
             }
-            if (testCbaleBuildings(getTile(tempX - tileHeight, tempY).buildingId)) {
-              texture(cableEnd_right);
+            if (testCableBuildings(getTile(tempX - tileHeight, tempY).buildingId)) {
+              texture(cableEnd_right[tempTile.buildingAnimation]);
               plane(buildingWidth, buildingHeight);
             }
           }

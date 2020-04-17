@@ -4,6 +4,14 @@ class GameData {
 
 var IMG_PLACEHOLDER     = 0;
 
+function getImageList(path, imgName, maxLength) {
+  var ret = [];
+  for (var i = 0; i < maxLength; i++) {
+    ret.push(loadImage(path + imgName + formatNumber(i, 2) + '.png'));
+  }
+  return ret;
+}
+
 function getTexture(entityIndex, animationIndex, frameIndex, allAnimations) {
   //if (index <= allTextures.size)
   //console.log('entityIndex: ' + entityIndex + ' animIndex: ' + animationIndex + ' frameIndex:' + frameIndex);

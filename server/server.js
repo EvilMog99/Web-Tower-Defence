@@ -35,6 +35,10 @@ var gameTimer;
 var cableTimer;
 var retData;
 var updateX = 0;
+var gameNumberOfCycles = 1200;//counts down the number of cycles in the game to increase difficulty
+var Diff_1 = gameNumberOfCycles - 300;
+var Diff_2 = gameNumberOfCycles - 600;
+var Diff_3 = gameNumberOfCycles - 900;
 
 //setup socket
 var socket = require('socket.io');//import socket
@@ -88,6 +92,12 @@ var allRecipes = [
   [[ItemCopper, 10], [ItemStone, 30]], //3 - Coal Plant
 ];
 
+//minimum electricity values to change Cable image
+var ElectricCableLvl1 = 5;
+var ElectricCableLvl2 = 10;
+var ElectricCableLvl3 = 20;
+var ElectricCableLvl4 = 50;
+
 //all buildings that can use cables
 var allCableBuildings = [0, 1, 2, 3, 4, 5];
 function testCbaleBuildings(buildingId) {
@@ -117,14 +127,16 @@ function init() {
 
   for (var x = 0; x < wldWidth; x++) {
     for (var y = 0; y < wldHeight; y++) {
-      if (x % 10 == 0 || y % 10 == 0) {
+      /*if (x % 10 == 0 || y % 10 == 0) {
         allTiles[x][y].setFloorId(2);
       }
       else if (x > wldWidth - 3 || y > wldHeight - 3) {
         allTiles[x][y].setFloorId(2);
       } else {
         allTiles[x][y].setFloorId(0);
-      }
+      }*/
+
+      allTiles[x][y].setFloorId(0);
 
       if (Math.random() * 100 < 2) {
         allTiles[x][y].setFloorId(3);
@@ -180,14 +192,15 @@ function newConnection(socket) {
     }*/
   }
 
-  function getPlayerByIdCode(testCode) {
+  //Has a dublicate made for server workings
+  /*function getPlayerByIdCode(testCode) {
     for (var i = 0; i < allPlayers.length; i++) {
       if (allPlayers[i].verifyByIdCode(testCode)) {
         return allPlayers[i];
       }
     }
     return false;
-  }
+  }*/
 
   function getPlayerByInteractCode(testCode) {
     for (var i = 0; i < allPlayers.length; i++) {
@@ -208,113 +221,124 @@ function newConnection(socket) {
   }*/
 }
 
+var cableUpdate_running = false;//make sure this thread doesn't run twice at the same time
 function cableUpdate() {
-  for (var i = 0; i < allCables.length; i++) {
-    allCables[i].shareElectricity();
-  }
-  //if cable tiles requested to be removed?
-  if (allCablesRemoveRequests.length > 0) {
-    for (var i = 0; i < allCablesRemoveRequests.length; i++) {
-      removeFromAllCables(allCablesRemoveRequests[i]);
+  if (!cableUpdate_running) {
+    cableUpdate_running = true;
+    for (var i = 0; i < allCables.length; i++) {
+      allCables[i].shareElectricity();
     }
-    allCablesRemoveRequests = [];
+    //if cable tiles requested to be removed?
+    if (allCablesRemoveRequests.length > 0) {
+      for (var i = 0; i < allCablesRemoveRequests.length; i++) {
+        removeFromAllCables(allCablesRemoveRequests[i]);
+      }
+      allCablesRemoveRequests = [];
+    }
+    cableUpdate_running = false;
   }
 }
 
+var timedUpdate_running = false;//make sure this thread doesn't run twice at the same time
 function timedUpdate() {
-  var tileUpdate = [];
-  var projectileUpdate = [];
-  var runProjRemove = false;
+  if (gameNumberOfCycles > 0) gameNumberOfCycles -= 0.1;//countdown game timer to progress the game
 
-  //console.log('updateX: ' + updateX);
-  //update tiles
-  /*for (var y = 0; y < wldHeight; y++) {
-    //update tile
-    allTiles[updateX][y].updateTile();
+  if (!timedUpdate_running) {
+    timedUpdate_running = true;
+    var tileUpdate = [];
+    var projectileUpdate = [];
+    var runProjRemove = false;
+    //console.log('updateX: ' + updateX);
+    //update tiles
+    /*for (var y = 0; y < wldHeight; y++) {
+      //update tile
+      allTiles[updateX][y].updateTile();
 
-    //add tile to list of tiles to be sent to clients
-    tileUpdate.push(allTiles[updateX][y].createTileToSend());
-  }
-  if (updateX >= wldWidth - 1) updateX = 0;
-  else updateX++;*/
-
-  if (allProjectiles.length > 0) {
-    //update all projectiles and client data
-    for (var i = 0; i < allProjectiles.length; i++) {
-      allProjectiles[i].update(tileUpdate);
-      if (allProjectiles[i].id > -1) {
-        projectileUpdate.push(allProjectiles[i].createProjectileToSend());
-      }
-      else runProjRemove = true;
+      //add tile to list of tiles to be sent to clients
+      tileUpdate.push(allTiles[updateX][y].createTileToSend());
     }
+    if (updateX >= wldWidth - 1) updateX = 0;
+    else updateX++;*/
 
-    if (runProjRemove) {
-      //will only remove 1 projectile at a time to safe gaurd against errors
-      //console.log('try to delete projectile');
+    if (allProjectiles.length > 0) {
+      //update all projectiles and client data
       for (var i = 0; i < allProjectiles.length; i++) {
-        if (allProjectiles[i].id == -1) {
-          //test to see if the turret that fired it wants to fire another
-          var tempTile = getTileIndexed(allProjectiles[i].startX, allProjectiles[i].startY);
-          if (tempTile.buildingId == 0 || tempTile.buildingId == 1 || tempTile.buildingId == 2) {
-            tempTile.updateTile();
-          }
-          //splice projectile out of array
-          allProjectiles.splice(i, 1);
-          //console.log('deleted projectile');
-          break;
+        allProjectiles[i].update(tileUpdate);
+        if (allProjectiles[i].id > -1) {
+          projectileUpdate.push(allProjectiles[i].createProjectileToSend());
         }
+        else runProjRemove = true;
       }
-    }
-  }
 
-
-
-  //update map
-  for (var i = 0; i < tileWidth * 4; i++) {
-    if (tileUpdateX >= wldWidth - 1) {
-      tileUpdateX = 0;
-      if (tileUpdateY >= wldHeight - 1) tileUpdateY = 0;
-      else tileUpdateY++;
-    }
-    else tileUpdateX++;
-
-    //console.log('Updating tile: x' + tileUpdateX + ' y: ' + tileUpdateY);
-    allTiles[tileUpdateX][tileUpdateY].updateTile();
-    //add tile to list of tiles to be sent to clients
-    tileUpdate.push(allTiles[tileUpdateX][tileUpdateY].createTileToSend());
-  }
-
-  //console.log("allPlayers length: " + allPlayers.length);
-  if (allPlayers.length > 0) {
-    //prepare player specific data so message can be sent when next message from client is recieved
-    for (var i = 0; i < allPlayers.length; i++) {
-      allPlayers[i].update();
-      //if the player requested to place a building?
-      if (allPlayers[i].requestPlace) {
-        allPlayers[i].requestPlace = false;
-        //tests if the player can afford a building and has one selected?
-        if (allPlayers[i].canAffordBuilding()) {
-          //console.log('Player at x: ' + Math.floor(allPlayers[i].currentX / tileWidth) + ' y: ' + Math.floor(allPlayers[i].currentY / tileHeight) + ' - Try to place at x: ' + allPlayers[i].requestPlaceX + ' y: ' + allPlayers[i].requestPlaceY);
-          var tempPlaceTile = getTileIndexed(allPlayers[i].requestPlaceX, allPlayers[i].requestPlaceY);
-          //make sure player has permission to break/place building and can afford it
-          if ( ((allPlayers[i].selectedItem == -1 && (allPlayers[i].uniqueIdCode == tempPlaceTile.buildingOwner || tempPlaceTile.buildingOwner == -1)) || (tempPlaceTile.buildingId == -1 && allPlayers[i].selectedItem > -1))
-            && (tempPlaceTile.canBuildHere() || allPlayers[i].selectedItem == -1)) {
-            if (allPlayers[i].selectedItem == -1) {
-              giveResources(allPlayers[i], tempPlaceTile.buildingId);//give player some resources that the building had
-              tempPlaceTile.setBuildingId(allPlayers[i].selectedItem, -1);//set building Id to nothing
+      if (runProjRemove) {
+        //will only remove 1 projectile at a time to safe gaurd against errors
+        //console.log('try to delete projectile');
+        for (var i = 0; i < allProjectiles.length; i++) {
+          if (allProjectiles[i].id == -1) {
+            //test to see if the turret that fired it wants to fire another
+            var tempTile = getTileIndexed(allProjectiles[i].startX, allProjectiles[i].startY);
+            if (tempTile.buildingId == 0 || tempTile.buildingId == 1 || tempTile.buildingId == 2) {
+              tempTile.updateTile();
             }
-            else {
-              tempPlaceTile.setBuildingId(allPlayers[i].selectedItem, allPlayers[i].uniqueIdCode);
-              allPlayers[i].buyBuilding();
-            }
-            //console.log('Successfully placed building: ' + getTileIndexed(allPlayers[i].requestPlaceX, allPlayers[i].requestPlaceY).buildingId);
-            tileUpdate.push(tempPlaceTile.createTileToSend());//add to next update message to update for all clients
+            //splice projectile out of array
+            allProjectiles.splice(i, 1);
+            //console.log('deleted projectile');
+            break;
           }
         }
       }
-
-      allPlayers[i].clientSocket.emit('updateFromServer', prepareReturnMessage(allPlayers[i], tileUpdate, projectileUpdate));
     }
+
+
+
+    //update map
+    for (var i = 0; i < tileWidth * 4; i++) {
+      if (tileUpdateX >= wldWidth - 1) {
+        tileUpdateX = 0;
+        if (tileUpdateY >= wldHeight - 1) tileUpdateY = 0;
+        else tileUpdateY++;
+      }
+      else tileUpdateX++;
+
+      //console.log('Updating tile: x' + tileUpdateX + ' y: ' + tileUpdateY);
+      allTiles[tileUpdateX][tileUpdateY].updateTile();
+      //add tile to list of tiles to be sent to clients
+      tileUpdate.push(allTiles[tileUpdateX][tileUpdateY].createTileToSend());
+    }
+
+    //console.log("allPlayers length: " + allPlayers.length);
+    if (allPlayers.length > 0) {
+      //prepare player specific data so message can be sent when next message from client is recieved
+      for (var i = 0; i < allPlayers.length; i++) {
+        allPlayers[i].update();
+        //if the player requested to place a building?
+        if (allPlayers[i].requestPlace) {
+          allPlayers[i].requestPlace = false;
+          //tests if the player can afford a building and has one selected?
+          if (allPlayers[i].canAffordBuilding()) {
+            //console.log('Player at x: ' + Math.floor(allPlayers[i].currentX / tileWidth) + ' y: ' + Math.floor(allPlayers[i].currentY / tileHeight) + ' - Try to place at x: ' + allPlayers[i].requestPlaceX + ' y: ' + allPlayers[i].requestPlaceY);
+            var tempPlaceTile = getTileIndexed(allPlayers[i].requestPlaceX, allPlayers[i].requestPlaceY);
+            //make sure player has permission to break/place building and can afford it
+            if ( ((allPlayers[i].selectedItem == -1 && (allPlayers[i].uniqueIdCode == tempPlaceTile.buildingOwner || tempPlaceTile.buildingOwner == -1)) || (tempPlaceTile.buildingId == -1 && allPlayers[i].selectedItem > -1))
+              && (tempPlaceTile.canBuildHere() || allPlayers[i].selectedItem == -1)) {
+              if (allPlayers[i].selectedItem == -1) {
+                giveResources(allPlayers[i], tempPlaceTile.buildingId, 1);//give player some resources that the building had
+                tempPlaceTile.setBuildingId(allPlayers[i].selectedItem, -1);//set building Id to nothing
+              }
+              else {
+                tempPlaceTile.setBuildingId(allPlayers[i].selectedItem, allPlayers[i].uniqueIdCode);
+                allPlayers[i].buyBuilding();
+              }
+              //console.log('Successfully placed building: ' + getTileIndexed(allPlayers[i].requestPlaceX, allPlayers[i].requestPlaceY).buildingId);
+              tileUpdate.push(tempPlaceTile.createTileToSend());//add to next update message to update for all clients
+            }
+          }
+        }
+
+        allPlayers[i].clientSocket.emit('updateFromServer', prepareReturnMessage(allPlayers[i], tileUpdate, projectileUpdate));
+      }
+    }
+    timedUpdate_running = false;
   }
 }
 
@@ -373,68 +397,77 @@ function getNeighbouringTiles(x, y) {
   return ret;
 }
 
-function giveResources(player, buildingId) {
+function giveResources(player, buildingId, modifier) {
   switch (buildingId) {
     case 0:// Anti Bacteria Turret
-    player.inventory[ItemStone] += Math.floor((Math.random() * 2) + 3);
-    player.inventory[ItemIron] += Math.floor((Math.random() * 3) + 2);
+    player.inventory[ItemStone] += Math.floor(((Math.random() * 2) + 3) * modifier);
+    player.inventory[ItemIron] += Math.floor(((Math.random() * 3) + 2) * modifier);
     break;
 
     case 1:// Anti Player Turret
-    player.inventory[ItemStone] += Math.floor((Math.random() * 2) + 3);
-    player.inventory[ItemIron] += Math.floor((Math.random() * 3) + 2);
+    player.inventory[ItemStone] += Math.floor(((Math.random() * 2) + 3) * modifier);
+    player.inventory[ItemIron] += Math.floor(((Math.random() * 3) + 2) * modifier);
     break;
 
     case 2:// Mining Turret
-    player.inventory[ItemCopper] += Math.floor((Math.random() * 20) + 10);
-    player.inventory[ItemIron] += Math.floor((Math.random() * 10) + 20);
+    player.inventory[ItemCopper] += Math.floor(((Math.random() * 20) + 10) * modifier);
+    player.inventory[ItemIron] += Math.floor(((ath.random() * 10) + 20) * modifier);
     break;
 
     case 3:// Cables
-    player.inventory[ItemCopper] += Math.floor((Math.random() * 2));
+    player.inventory[ItemCopper] += Math.floor(((Math.random() * 2)) * modifier);
     player.inventory[ItemIron] += 1;
     break;
 
     case 4:// Solar Panels
-    player.inventory[ItemCopper] += Math.floor((Math.random() * 3) + 2);
+    player.inventory[ItemCopper] += Math.floor(((Math.random() * 3) + 2) * modifier);
     player.inventory[ItemIron] += 1;
     break;
 
     case 5:// Coal Plant
-    player.inventory[ItemCopper] += Math.floor((Math.random() * 6) + 4);
-    player.inventory[ItemStone] += Math.floor((Math.random() * 10) + 20);
+    player.inventory[ItemCopper] += Math.floor(((Math.random() * 6) + 4) * modifier);
+    player.inventory[ItemStone] += Math.floor(((Math.random() * 10) + 20) * modifier);
     break;
 
     case 6:// Stone
-    player.inventory[ItemStone] += Math.floor((Math.random() * 20) + 10);
-    player.inventory[ItemIron] += Math.floor((Math.random() * 1.5));
-    player.inventory[ItemCopper] += Math.floor((Math.random() * 1.5));
-    player.inventory[ItemUranium] += Math.floor((Math.random() * 1.5));
-    player.inventory[ItemCoal] += Math.floor((Math.random() * 1.5));
+    player.inventory[ItemStone] += Math.floor(((Math.random() * 20) + 10) * modifier);
+    player.inventory[ItemIron] += Math.floor(((Math.random() * 1.5)) * modifier);
+    player.inventory[ItemCopper] += Math.floor(((Math.random() * 1.5)) * modifier);
+    player.inventory[ItemUranium] += Math.floor(((Math.random() * 1.5)) * modifier);
+    player.inventory[ItemCoal] += Math.floor(((Math.random() * 1.5)) * modifier);
     break;
 
     case 7:// Iron Ore
-    player.inventory[ItemStone] += Math.floor((Math.random() * 5) + 5);
-    player.inventory[ItemIron] += Math.floor((Math.random() * 20) + 10);
+    player.inventory[ItemStone] += Math.floor(((Math.random() * 5) + 5) * modifier);
+    player.inventory[ItemIron] += Math.floor(((Math.random() * 20) + 10) * modifier);
     break;
 
     case 8:// Copper Ore
-    player.inventory[ItemStone] += Math.floor((Math.random() * 5) + 5);
-    player.inventory[ItemCopper] += Math.floor((Math.random() * 20) + 10);
+    player.inventory[ItemStone] += Math.floor(((Math.random() * 5) + 5) * modifier);
+    player.inventory[ItemCopper] += Math.floor(((Math.random() * 20) + 10) * modifier);
     break;
 
     case 9:// Uranium Ore
-    player.inventory[ItemStone] += Math.floor((Math.random() * 5) + 5);
-    player.inventory[ItemUranium] += Math.floor((Math.random() * 20) + 10);
+    player.inventory[ItemStone] += Math.floor(((Math.random() * 5) + 5) * modifier);
+    player.inventory[ItemUranium] += Math.floor(((Math.random() * 20) + 10) * modifier);
     break;
 
     case 10:// Coal
-    player.inventory[ItemStone] += Math.floor((Math.random() * 5) + 5);
-    player.inventory[ItemCoal] += Math.floor((Math.random() * 20) + 10);
+    player.inventory[ItemStone] += Math.floor(((Math.random() * 5) + 5) * modifier);
+    player.inventory[ItemCoal] += Math.floor(((Math.random() * 20) + 10) * modifier);
     break;
 
     default:
   }
+}
+
+function getPlayerByIdCode(testCode) {
+  for (var i = 0; i < allPlayers.length; i++) {
+    if (allPlayers[i].verifyByIdCode(testCode)) {
+      return allPlayers[i];
+    }
+  }
+  return false;
 }
 
 class Player {
@@ -579,14 +612,25 @@ function createProjectile(projId, tile) {
           }
           else if (projId == 2) {
             //if it is an ore?
-            if ((tempTile.buildingId == 6 && testOreIsRequired(0, tile.owner))
-                || (tempTile.buildingId == 7 && testOreIsRequired(1, tile.owner))
-                || (tempTile.buildingId == 8  && testOreIsRequired(2, tile.owner))
-                || (tempTile.buildingId == 9 && testOreIsRequired(3, tile.owner))
-                || (tempTile.buildingId == 10 && testOreIsRequired(4, tile.owner))) {
+            var pl = getPlayerByIdCode(tile.buildingOwner);
+            if ((tempTile.buildingId == 6 && testOreIsRequired(0, pl))
+                || (tempTile.buildingId == 7 && testOreIsRequired(1, pl))
+                || (tempTile.buildingId == 8  && testOreIsRequired(2, pl))
+                || (tempTile.buildingId == 9 && testOreIsRequired(3, pl))
+                || (tempTile.buildingId == 10 && testOreIsRequired(4, pl))) {
               targetX = x;
               targetY = y;
               foundTarget = true;
+            }
+            else if (!foundTarget &&
+                (tempTile.buildingId == 6 && (testOreCanBeCollected(0, pl))
+                || (tempTile.buildingId == 7 && testOreIsRequired(1, pl))
+                || (tempTile.buildingId == 8  && testOreIsRequired(2, pl))
+                || (tempTile.buildingId == 9 && testOreIsRequired(3, pl))
+                || (tempTile.buildingId == 10 && testOreIsRequired(4, pl)))) {
+              targetX = x;
+              targetY = y;
+              foundLessaTarget = true;
             }
           }
         }
@@ -604,20 +648,23 @@ function createProjectile(projId, tile) {
   return false;
 }
 
-function testOreIsRequired(invId, ownerId) {
-  //should try for 200 of each then go random to a max of 500
-  var player = getPlayerByIdCode(ownerId);
+function testOreIsRequired(invId, player) {
+  //should try for 200 of each
   //take ore if player is low on it
   if (player.inventory[invId] < 200) return true;
-  //sometimes it will just take the random ore if inv is not at max
-  else if (player.inventory[invId] < 500 && Math.random() * 100 > 80) return true;
-  //only take ore if all inventory slots are at 200
+  /*//only take ore if all inventory slots are at 200
   else {
     for (var i = 0; i < player.inventory.length; i++) {
       if (player.inventory[i] < 200) return false;
     }
-  }
+  }*/
   return true;
+}
+
+function testOreCanBeCollected(invId, player) {
+  //take the random ore if inv is not at max
+  if (player.inventory[invId] < 500) return true;
+  return false;
 }
 
 class Projectile {
@@ -637,6 +684,7 @@ class Projectile {
     //if target has been reached
     if (this.x > this.targetX - 0.5 && this.x < this.targetX + 0.5
     && this.y > this.targetY - 0.5 && this.y < this.targetY + 0.5) {
+      var tempSetId = -1;//to set this projectile's id after it's been processed at its destination
       switch (this.id) {
         case 0:// Anti Bacteria
         getTileIndexed(this.targetX, this.targetY).cureBacteria();
@@ -651,12 +699,78 @@ class Projectile {
         break;
 
         case 2:// Mining
+        var tempTile = getTileIndexed(this.targetX, this.targetY);
+        if (tempTile.buildingId == 6 || tempTile.buildingId == 7
+            || tempTile.buildingId == 8 || tempTile.buildingId == 9
+            || tempTile.buildingId == 10) {
+          switch (tempTile.buildingId) {
+            case 6://Stone
+            //set projectile to return to base with its collected Stone
+            tempSetId = 3;
+            this.targetX = this.startX;
+            this.targetY = this.startY;
+            break;
 
+            case 7://Iron Ore
+            //set projectile to return to base with its collected Iron Ore
+            tempSetId = 4;
+            this.targetX = this.startX;
+            this.targetY = this.startY;
+            break;
+
+            case 8://Copper Ore
+            //set projectile to return to base with its collected Copper Ore
+            tempSetId = 5;
+            this.targetX = this.startX;
+            this.targetY = this.startY;
+            break;
+
+            case 9://Uranium Ore
+            //set projectile to return to base with its collected Uranium Ore
+            tempSetId = 6;
+            this.targetX = this.startX;
+            this.targetY = this.startY;
+            break;
+
+            case 10://Coal Ore
+            //set projectile to return to base with its collected Coal Ore
+            tempSetId = 7;
+            this.targetX = this.startX;
+            this.targetY = this.startY;
+            break;
+
+            default:
+          }
+
+          tempTile.takeDamage(10);
+          //add tile to list of tiles to be updated on clients
+          tileUpdate.push(getTileIndexed(this.targetX, this.targetY).createTileToSend());
+        }
+        break;
+
+        case 3://Mining Proj returning with Stone
+        this.addToPlayerInv(6);
+        break;
+
+        case 4://Mining Proj returning with Iron Ore
+        this.addToPlayerInv(7);
+        break;
+
+        case 5://Mining Proj returning with Copper Ore
+        this.addToPlayerInv(8);
+        break;
+
+        case 6://Mining Proj returning with Uranium Ore
+        this.addToPlayerInv(9);
+        break;
+
+        case 7://Mining Proj returning with Coal Ore
+        this.addToPlayerInv(10);
         break;
 
         default:
       }
-      this.id = -1;
+      this.id = tempSetId;
     }
     else {
       if (this.targetX > this.x) this.x += this.speed;
@@ -664,6 +778,13 @@ class Projectile {
 
       if (this.targetY > this.y) this.y += this.speed;
       else if (this.targetY < this.y) this.y -= this.speed;
+    }
+  }
+
+  addToPlayerInv(buildingIdBasedOnOre) {
+    var tempPlayer = getPlayerByIdCode(getTileIndexed(this.targetX, this.targetY).buildingOwner);
+    if (tempPlayer) {
+      giveResources(tempPlayer, buildingIdBasedOnOre, 0.2);
     }
   }
 
@@ -705,7 +826,7 @@ class Tile {
     if (this.buildingHp <= 0) {
       this.setBuildingId(-1, -1);
     }
-    else if (this.buildingHp < BuildingMaxHp) {
+    else if (this.buildingOwner > -1 && this.buildingHp < BuildingMaxHp) {
       this.buildingHp += 10;
     }
     if (this.infection > this.infectionMax) {
@@ -779,10 +900,25 @@ class Tile {
 
       case 3: //Cables
       this.shareElectricity();
+      if (this.electricity >= ElectricCableLvl4) {
+        this.buildingAnimation = 4;
+      }
+      else if (this.electricity >= ElectricCableLvl3) {
+        this.buildingAnimation = 3;
+      }
+      else if (this.electricity >= ElectricCableLvl2) {
+        this.buildingAnimation = 2;
+      }
+      else if (this.electricity >= ElectricCableLvl1) {
+        this.buildingAnimation = 1;
+      }
+      else {
+        this.buildingAnimation = 0;
+      }
       break;
 
       case 4: //Solar panel
-      this.electricity += 40;
+      this.electricity += 10;
       this.testElectricityMax(1000);
       this.shareElectricity();
       //console.log('Solar panel power: ' + this.electricity);
@@ -879,7 +1015,7 @@ class Tile {
       this.setFloorId(0);
       this.infection = 0;
       //random chance of spawning ore
-      if (Math.random * 10 > 4)
+      if (Math.random() * 10 > 4)
         this.setBuildingId(spawnableBuildingIds[Math.floor(Math.random() * spawnableBuildingIds.length)], -1);
       this.justCured = true;
     }
@@ -904,10 +1040,10 @@ class Tile {
       floorId: this.floorId,
       floorAnimation: this.floorAnimation,
       buildingId: this.buildingId,
-      buildingAniamtion: this.buildingAniamtion,
+      buildingAnimation: this.buildingAnimation,
       infectionPercent: this.getInfectionPercent(),
       justCured: this.justCured,
-      electricity: this.electricity
+      //electricity: this.electricity
     };
   }
 }
