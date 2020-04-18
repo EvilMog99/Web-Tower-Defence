@@ -48,7 +48,7 @@ class Player {
     this.requestPlaceY = wldIndexY;
   }
 
-  updatePopsition() {
+  updatePosition() {
     this.moveX(Math.cos(this.rotZ) * this.velocity);
     this.moveY(Math.sin(this.rotZ) * this.velocity);
   }

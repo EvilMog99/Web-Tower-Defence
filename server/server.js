@@ -47,11 +47,14 @@ var io = socket(server);//set io with the server (and its socket data)
 //set game variables
 var allPlayers = [];
 var playerIndex = 0;
+var indexToDelete = -1;
 
 var wldWidth = 255;
 var wldHeight = 255;
 var tileWidth = 100;
 var tileHeight = 100;
+var totalMapWidth = wldWidth * tileWidth;
+var totalMapHeight = wldHeight * tileHeight;
 var allTiles = [];
 var allProjectiles = [];
 var allCables = [];//special array to process cables faster than other tiles
@@ -270,6 +273,7 @@ function timedUpdate() {
         else runProjRemove = true;
       }
 
+
       if (runProjRemove) {
         //will only remove 1 projectile at a time to safe gaurd against errors
         //console.log('try to delete projectile');
@@ -308,9 +312,11 @@ function timedUpdate() {
 
     //console.log("allPlayers length: " + allPlayers.length);
     if (allPlayers.length > 0) {
+      indexToDelete = -1;
       //prepare player specific data so message can be sent when next message from client is recieved
       for (var i = 0; i < allPlayers.length; i++) {
         allPlayers[i].update();
+        if (allPlayers[i].connectionTimer < 0) indexToDelete = i;//see if this player needs to be deleted?
         //if the player requested to place a building?
         if (allPlayers[i].requestPlace) {
           allPlayers[i].requestPlace = false;
@@ -336,6 +342,12 @@ function timedUpdate() {
         }
 
         allPlayers[i].clientSocket.emit('updateFromServer', prepareReturnMessage(allPlayers[i], tileUpdate, projectileUpdate));
+      }
+
+      //Delete specified player
+      if (indexToDelete != -1) {
+        allPlayers.splice(indexToDelete, 1);
+        console.log('Deleted player at index: ' + indexToDelete);
       }
     }
     timedUpdate_running = false;
@@ -411,7 +423,7 @@ function giveResources(player, buildingId, modifier) {
 
     case 2:// Mining Turret
     player.inventory[ItemCopper] += Math.floor(((Math.random() * 20) + 10) * modifier);
-    player.inventory[ItemIron] += Math.floor(((ath.random() * 10) + 20) * modifier);
+    player.inventory[ItemIron] += Math.floor(((Math.random() * 10) + 20) * modifier);
     break;
 
     case 3:// Cables
@@ -518,6 +530,9 @@ class Player {
     if (this.receievedClientMessage) {
       this.receievedClientMessage = false;
       this.connectionTimer = 1000;
+    }
+    else {
+      this.connectionTimer--;
     }
   }
 
@@ -791,8 +806,8 @@ class Projectile {
   createProjectileToSend() {
     return {
       id: this.id,
-      x: this.x * tileWidth,
-      y: this.y * tileHeight
+      x: Math.floor(this.x * tileWidth),
+      y: Math.floor(this.y * tileHeight)
     };
   }
 }

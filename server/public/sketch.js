@@ -100,6 +100,8 @@ var wldWidth = 255;
 var wldHeight = 255;
 var tileWidth = 100;
 var tileHeight = 100;
+var totalMapWidth = wldWidth * tileWidth;
+var totalMapHeight = wldHeight * tileHeight;
 var buildingWidth = 100;
 var buildingHeight = 125;
 var buildingOffsetY = -12.5;
@@ -107,6 +109,7 @@ var projectileWidth = 40;
 var projectileHeight = 40;
 
 var panel_gameMenu;
+var playerPositionOutput;//button with text field to show the player's current location
 
 //work out the start and end index of tiles to draw to the screen
 var maxX;
@@ -293,26 +296,29 @@ function loadResources()
   var panel_gameStats = new GuiPanel(0, 0, -325, 900, 50, allPanelFrames);
   sceneGame.allGuiPanels[5].push(panel_gameStats);
   spacingX = -450;
+  playerPositionOutput = new GuiButton(0, 0, 0, spacingX + 60, 40, 100, 100, allButtonFrames, -1, -1, -1, '', 20);//button for position output
+  panel_gameStats.allButtons.push(playerPositionOutput);
+  spacingX += 120;
   panel_gameStats.allButtons.push(new GuiButton(1, 0, 0, spacingX + 25, 0, 48, 48, allButtonFrames, -1, -1, -1, '', 28));
   panel_gameStats.allButtons.push(new GuiButton(0, 0, 0, spacingX + 60, 0, 0, 0, allButtonFrames, -1, -1, -1, 'Stone:', 20));
   pGameStats_button_invStone = new GuiButton(0, 0, 0, spacingX + 105, 0, 0, 0, allButtonFrames, -1, -1, -1, '000', 20);
   panel_gameStats.allButtons.push(pGameStats_button_invStone);
-  spacingX += 140;
+  spacingX += 160;
   panel_gameStats.allButtons.push(new GuiButton(1, 1, 0, spacingX + 25, 0, 48, 48, allButtonFrames, -1, -1, -1, '', 28));
   panel_gameStats.allButtons.push(new GuiButton(0, 0, 0, spacingX + 60, 0, 0, 0, allButtonFrames, -1, -1, -1, 'Iron:', 20));
   pGameStats_button_invIron = new GuiButton(0, 0, 0, spacingX + 100, 0, 0, 0, allButtonFrames, -1, -1, -1, '000', 20);
   panel_gameStats.allButtons.push(pGameStats_button_invIron);
-  spacingX += 135;
+  spacingX += 155;
   panel_gameStats.allButtons.push(new GuiButton(1, 2, 0, spacingX + 25, 0, 48, 48, allButtonFrames, -1, -1, -1, '', 28));
   panel_gameStats.allButtons.push(new GuiButton(0, 0, 0, spacingX + 60, 0, 0, 0, allButtonFrames, -1, -1, -1, 'Copper:', 20));
   pGameStats_button_invCopper = new GuiButton(0, 0, 0, spacingX + 110, 0, 0, 0, allButtonFrames, -1, -1, -1, '000', 20);
   panel_gameStats.allButtons.push(pGameStats_button_invCopper);
-  spacingX += 150;
+  spacingX += 170;
   panel_gameStats.allButtons.push(new GuiButton(1, 3, 0, spacingX + 25, 0, 48, 48, allButtonFrames, -1, -1, -1, '', 28));
   panel_gameStats.allButtons.push(new GuiButton(0, 0, 0, spacingX + 60, 0, 0, 0, allButtonFrames, -1, -1, -1, 'Uranium:', 20));
   pGameStats_button_invUranium = new GuiButton(0, 0, 0, spacingX + 115, 0, 0, 0, allButtonFrames, -1, -1, -1, '000', 20);
   panel_gameStats.allButtons.push(pGameStats_button_invUranium);
-  spacingX += 135;
+  spacingX += 155;
   panel_gameStats.allButtons.push(new GuiButton(1, 4, 0, spacingX + 25, 0, 48, 48, allButtonFrames, -1, -1, -1, '', 28));
   panel_gameStats.allButtons.push(new GuiButton(0, 0, 0, spacingX + 60, 0, 0, 0, allButtonFrames, -1, -1, -1, 'Coal:', 20));
   pGameStats_button_invCoal = new GuiButton(0, 0, 0, spacingX + 100, 0, 0, 0, allButtonFrames, -1, -1, -1, '000', 20);
@@ -451,6 +457,10 @@ function timedUpdate() {
     }
 
     player.updateMovement(playerMoveX, playerMoveY);
+    //make sure position is within normal map parameters
+    player.locX = getWldX(player.locX);
+    player.locY = getWldY(player.locY);
+    playerPositionOutput.text = 'Postion \nX: ' + (Math.floor(player.locX) / tileWidth) + ' \nY: ' + (Math.floor(player.locY) / tileHeight);
 
     //update all projectiles
     //(removed)
@@ -571,6 +581,20 @@ function getTileIndexed(x, y) {
   x = Math.floor(x);
   y = Math.floor(y);
   return allTiles[x][y];
+}
+
+function getWldX(x) {
+  //make sure x is positive even if its value is a bit excesive
+  if (x < 0) x += totalMapWidth * (Math.abs(Math.floor(x / totalMapWidth)) + 1);
+  x = x % totalMapWidth;
+  return x;
+}
+
+function getWldY(y) {
+  //make sure y is positive even if its value is a bit excesive
+  if (y < 0) y += totalMapHeight * (Math.abs(Math.floor(y / totalMapHeight)) + 1);
+  y = y % totalMapHeight;
+  return y;
 }
 
 //function getTileIndexed(x, y) {
@@ -741,12 +765,21 @@ function draw()
       }
     }
 
+
+    // var edgeLeftX = getWldX(player.locX - (canvasWidth / 2) - tileWidth);
+    // var edgeRightX = getWldX(player.locX + (canvasWidth / 2) + tileWidth);
+    // var edgeTopY = getWldY(player.locY - (canvasHeight / 2) - tileHeight);
+    // var edgeBottomY = getWldY(player.locY + (canvasHeight / 2) + tileHeight);
+    var edgeLeftX = - (canvasWidth / 2) - tileWidth;
+    var edgeRightX = (canvasWidth / 2) + tileWidth;
+    var edgeTopY = - (canvasHeight / 2) - tileHeight;
+    var edgeBottomY = (canvasHeight / 2) + tileHeight;
     //draw projectiles
     for (var i = 0; i < allProjectiles.length; i++) {
-      if (allProjectiles[i].x > player.locX - (canvasWidth / 2) - tileWidth
-      && allProjectiles[i].x < player.locX + (canvasWidth / 2) + tileWidth
-      && allProjectiles[i].y > player.locY - (canvasHeight / 2) - tileHeight
-      && allProjectiles[i].y < player.locY + (canvasHeight / 2) + tileHeight) {
+      if (getWldX(player.locX) - getWldX(allProjectiles[i].x) > edgeLeftX
+      && getWldX(player.locX) - getWldX(allProjectiles[i].x) < edgeRightX
+      && getWldY(player.locY) - getWldY(allProjectiles[i].y) > edgeTopY
+      && getWldY(player.locY) - getWldY(allProjectiles[i].y) < edgeBottomY) {
         push();
         noStroke();
         translate(player.locX - allProjectiles[i].x - (tileWidth / 2), player.locY - allProjectiles[i].y - (tileHeight / 2), -0.0002);
