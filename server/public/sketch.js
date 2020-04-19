@@ -252,7 +252,7 @@ function loadResources()
   cableEnd_right = getImageList('textures/CableEnds/', 'Right', 5);
 
   //get all flages
-  allFlags = getImageList('textures/allFlags/', 'F', 11);
+  allFlags = getImageList('textures/AllFlags/', 'F', 11);
 
   //!!!!!!!!Do same for characters later!
 
