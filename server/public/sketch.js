@@ -1,4 +1,5 @@
 var serverAddress = 'localhost:3000';
+//var serverAddress = 'http://93.119.105.51:3000';
 var socket;
 
 var mouse;
@@ -19,6 +20,7 @@ var allCharAnimations;
 var allTileAnimations;
 var allBuildingAnimations;
 var allProjectileAnimations;
+var allFlags;
 var allButtonFrames;
 var allPanelFrames;
 
@@ -107,6 +109,10 @@ var buildingHeight = 125;
 var buildingOffsetY = -12.5;
 var projectileWidth = 40;
 var projectileHeight = 40;
+var flagOffsetX = 0.12 * tileWidth;
+var flagOffsetY = -0.45 * tileHeight;
+var flagWidth = (buildingWidth / 4) * 1.125;
+var flagHeight = (buildingHeight / 4) * 1.125;
 
 var panel_gameMenu;
 var playerPositionOutput;//button with text field to show the player's current location
@@ -114,6 +120,11 @@ var playerPositionOutput;//button with text field to show the player's current l
 //work out the start and end index of tiles to draw to the screen
 var maxX;
 var maxY;
+
+//timer to send every 100 ticks
+//, or can set timerToNextSendMessage to max value to automatically send a message
+var timerToNextSendMessage = 0;
+var MaxTimerToNextSendMessage = 100;
 
 var testimg;
 
@@ -210,7 +221,7 @@ function loadResources()
   allInfectionAnimations[0] = loadAnimation('Infection', 0, [2, 2, 2, 2, 2]);
 
   allBuildingAnimations = [];
-  allBuildingAnimations[0] = loadAnimation('Building', 0, [1, 1, 1, 1]);//Building 000
+  allBuildingAnimations[0] = loadAnimation('Building', 0, [1]);//Building 000
   allBuildingAnimations[1] = loadAnimation('Building', 1, [1]);//Building 001
   allBuildingAnimations[2] = loadAnimation('Building', 2, [1]);//Building 002
   allBuildingAnimations[3] = loadAnimation('Building', 3, [1, 1, 1, 1, 1]);//Building 003
@@ -239,6 +250,9 @@ function loadResources()
   cableEnd_down = getImageList('textures/CableEnds/', 'Down', 5);
   cableEnd_left = getImageList('textures/CableEnds/', 'Left', 5);
   cableEnd_right = getImageList('textures/CableEnds/', 'Right', 5);
+
+  //get all flages
+  allFlags = getImageList('textures/allFlags/', 'F', 11);
 
   //!!!!!!!!Do same for characters later!
 
@@ -492,20 +506,25 @@ function timedUpdate() {
   //
   // }
 
-  var updateFromClient = {
-    message: 'hia',
-    uniqueIdCode: uniqueIdCode,
-    command: -1,
-    currentX: player.locX,
-    currentY: player.locY,
-    selectedItem: player.selectedItem,
-    requestPlace: player.requestPlace,
-    requestPlaceX: player.requestPlaceX,
-    requestPlaceY: player.requestPlaceY
-  };
-  player.requestPlace = false;
-  //set message to server to update it
-  socket.emit('updateFromClient', updateFromClient);
+  timerToNextSendMessage--;
+  //only send message to server sometimes or if a click command has been made
+  if (timerToNextSendMessage <= 0 || player.requestPlace) {
+    var updateFromClient = {
+      message: 'hia',
+      uniqueIdCode: uniqueIdCode,
+      command: -1,
+      currentX: player.locX,
+      currentY: player.locY,
+      selectedItem: player.selectedItem,
+      requestPlace: player.requestPlace,
+      requestPlaceX: player.requestPlaceX,
+      requestPlaceY: player.requestPlaceY
+    };
+    player.requestPlace = false;
+    //set message to server to update it
+    socket.emit('updateFromClient', updateFromClient);
+    timerToNextSendMessage = MaxTimerToNextSendMessage;
+  }
 }
 
 
@@ -560,6 +579,7 @@ function updateFromServer(data) {
       if (tempData.buildingAnimation !== undefined) allTiles[tempData.gridX][tempData.gridY].buildingAnimation = tempData.buildingAnimation;
     }
     if (tempData.infectionPercent !== undefined) allTiles[tempData.gridX][tempData.gridY].setInfection(tempData.infectionPercent);
+    if (tempData.buildingFlagId !== undefined) allTiles[tempData.gridX][tempData.gridY].buildingFlagId = tempData.buildingFlagId;
     //if (tempData.electricity !== undefined) allTiles[tempData.gridX][tempData.gridY].electricity = tempData.electricity;
     //if (tempData.justCured !== undefined) ;//wheather to run curing animation
   }
@@ -745,6 +765,14 @@ function draw()
               plane(buildingWidth, buildingHeight);
             }
           }
+          //if this building has a flag set to it
+          else if (tempTile.buildingFlagId != -1) {
+            push();
+            translate(flagOffsetX, flagOffsetY, -0.0001);
+            texture(allFlags[tempTile.buildingFlagId]);
+            plane(flagWidth, flagHeight);
+            pop();
+          }
         }
         if (tempTile.infectionPercent > 0) {
           //make sure index is possitive and exists
@@ -774,12 +802,14 @@ function draw()
     var edgeRightX = (canvasWidth / 2) + tileWidth;
     var edgeTopY = - (canvasHeight / 2) - tileHeight;
     var edgeBottomY = (canvasHeight / 2) + tileHeight;
+    var plX = getWldX(player.locX);
+    var plY = getWldY(player.locY);
     //draw projectiles
     for (var i = 0; i < allProjectiles.length; i++) {
-      if (getWldX(player.locX) - getWldX(allProjectiles[i].x) > edgeLeftX
-      && getWldX(player.locX) - getWldX(allProjectiles[i].x) < edgeRightX
-      && getWldY(player.locY) - getWldY(allProjectiles[i].y) > edgeTopY
-      && getWldY(player.locY) - getWldY(allProjectiles[i].y) < edgeBottomY) {
+      if ((plX - getWldX(allProjectiles[i].x) > edgeLeftX)// || plX + (totalMapWidth / 2) - getWldX(allProjectiles[i].x + (wldWidth / 2)) > edgeLeftX || plX - (totalMapWidth / 2) - getWldX(allProjectiles[i].x + (wldWidth / 2)) > edgeLeftX)
+      && (plX - getWldX(allProjectiles[i].x) < edgeRightX)// || plX + (totalMapWidth / 2) - getWldX(allProjectiles[i].x + (wldWidth / 2)) > edgeRightX || plX - (totalMapWidth / 2) - getWldX(allProjectiles[i].x + (wldWidth / 2)) > edgeRightX)
+      && (plY - getWldY(allProjectiles[i].y) > edgeTopY)// || plY + (totalMapHeight / 2) - getWldY(allProjectiles[i].y + (wldHeight / 2)) > edgeTopY || plY - (totalMapHeight / 2) - getWldY(allProjectiles[i].y + (wldHeight / 2)) > edgeTopY)
+      && (plY - getWldY(allProjectiles[i].y) < edgeBottomY)) {// || plY + (totalMapHeight / 2) - getWldY(allProjectiles[i].y + (wldHeight / 2)) < edgeBottomY || plY - (totalMapHeight / 2) - getWldY(allProjectiles[i].y + (wldHeight / 2)) < edgeBottomY)) {
         push();
         noStroke();
         translate(player.locX - allProjectiles[i].x - (tileWidth / 2), player.locY - allProjectiles[i].y - (tileHeight / 2), -0.0002);

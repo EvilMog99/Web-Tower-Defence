@@ -14,6 +14,7 @@ class Tile {
     this.buildingFrame = 0;
     this.infectionPercent = 0;
     this.infectionFrame = 0;
+    this.buildingFlagId = -1;
   }
 
   setFloorId(id) {

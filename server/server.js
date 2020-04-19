@@ -115,6 +115,7 @@ var spawnableBuildingIds = [6, 6, 6, 6, 6, 7, 7, 8, 8, 9, 9, 9, 10];
 var BuildProjectileTimerMax = 1;
 var ProjectileRange = 8;
 var BuildingMaxHp = 100;
+var NumberOfFlags = 11;//number of different flags in game
 
 //set event handler for new connection
 io.sockets.on('connection', newConnection);
@@ -168,8 +169,9 @@ function newConnection(socket) {
     }
     else {
       //add player to game
+      playerIndex++;
       console.log('Client: ' + socket.id + ' Will be added to the game with IdCode: ' + data.uniqueIdCode + ' InteractCode: ' + data.interactCode);
-      allPlayers.push(new Player(socket, data.name, data.flagId, data.uniqueIdCode, data.interactCode));
+      allPlayers.push(new Player(socket, data.name, playerIndex, Math.floor(Math.random() * NumberOfFlags), data.uniqueIdCode, data.interactCode));
       socket.emit('joinSuccess', {});
     }
   }
@@ -483,10 +485,10 @@ function getPlayerByIdCode(testCode) {
 }
 
 class Player {
-  constructor(socket, name, flagId, uniqueIdCode, interactCode) {
+  constructor(socket, name, id, flagId, uniqueIdCode, interactCode) {
     this.name = name;
-    this.id = playerIndex++;
-    this.flagId = playerIndex;//flagId;
+    this.id = id;
+    this.flagId = flagId;//flagId;
     this.uniqueIdCode = uniqueIdCode;//so the server can recognise an existing client
     this.interactCode = interactCode;//so clients can interact with each other
     this.clientSocket = socket;
@@ -509,7 +511,7 @@ class Player {
     this.canvasWidth = 900;
     this.canvasHeight = 700;
 
-    console.log('Created a player with index:' + playerIndex);
+    console.log('Created a player with ID:' + id);
   }
 
   verifyByIdCode(code) {
@@ -824,6 +826,7 @@ class Tile {
     this.infection = 0;
     this.x = x;
     this.y = y;
+    this.buildingFlagId = -1;
     this.infection = 0;
     this.infectionMax = infectLv1;//number infection must reach before tile can be changed
     this.justCured = false;
@@ -1021,6 +1024,14 @@ class Tile {
       this.canShareElectricity = true;
     }
     else this.canShareElectricity = false;
+
+    //if this is an important building set its buildingAnimation to show the owner's flag
+    if (this.buildingId == 0 || this.buildingId == 1 || this.buildingId == 2) {
+      this.buildingFlagId = getPlayerByIdCode(this.buildingOwner).flagId;
+    }
+    else {
+      this.buildingFlagId = -1;//set no building flag
+    }
   }
 
   cureBacteria() {
@@ -1058,6 +1069,7 @@ class Tile {
       buildingAnimation: this.buildingAnimation,
       infectionPercent: this.getInfectionPercent(),
       justCured: this.justCured,
+      buildingFlagId: this.buildingFlagId
       //electricity: this.electricity
     };
   }
