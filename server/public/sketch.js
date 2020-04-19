@@ -533,13 +533,16 @@ function joinGame(name, flagId, uniqueIdCode, interactCode){
     name: name,
     flagId: flagId,
     uniqueIdCode: uniqueIdCode,
-    interactCode: interactCode
+    interactCode: interactCode,
   }
   socket.emit('newClient', data);
 }
 
 function joinSuccess(data) {
   console.log('Join Succeeded');
+  //set starting position fro player
+  if (data.startingX !== undefined) player.locX = data.startingX;
+  if (data.startingY !== undefined) player.locY = data.startingY;
 }
 
 function joinFail(data) {

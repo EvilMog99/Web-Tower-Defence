@@ -172,7 +172,50 @@ function newConnection(socket) {
       playerIndex++;
       console.log('Client: ' + socket.id + ' Will be added to the game with IdCode: ' + data.uniqueIdCode + ' InteractCode: ' + data.interactCode);
       allPlayers.push(new Player(socket, data.name, playerIndex, Math.floor(Math.random() * NumberOfFlags), data.uniqueIdCode, data.interactCode));
-      socket.emit('joinSuccess', {});
+      //have a set number of attempts to set a random player starting position
+      var startingXarr = [];
+      var startingYarr = [];
+      var areaFaultsArr = [];
+      var indexToBuild = -1;
+      for (var i = 0; i < 20; i++) {
+        startingXarr[i] = (Math.random() * wldWidth) * tileWidth;
+        startingYarr[i] = (Math.random() * wldHeight) * tileHeight;
+        areaFaultsArr[i] = 0;
+        for (var x = -5; x < 5; x++) {
+          for (var y = -5; y < 5; y++) {
+            //add fault points for every tile with another user's structure on it
+            if (getTileIndexed(x + startingXarr[i], y + startingYarr[i]).buildingOwner == -1) areaFaultsArr[i]++;
+          }
+        }
+        //break loop with location to build if a good spot has been found
+        if (areaFaultsArr[i] == 0) {
+          indexToBuild = i;
+          break;
+        }
+      }
+
+      //if no perfect places were found look for the best
+      if (indexToBuild == -1) {
+        indexToBuild = 0;
+        for (var i = 1; i < areaFaultsArr.length; i++) {
+          if (areaFaultsArr[i] < areaFaultsArr[indexToBuild]) indexToBuild = i;
+        }
+      }
+
+      // //clear the specified land for the new player
+      // var tempTile;
+      // for (var x = -5; x < 5; x++) {
+      //   for (var y = -5; y < 5; y++) {
+      //     //remove infection from all tiles that aren't player owned
+      //     tempTile = getTileIndexed(x + startingXarr[indexToBuild], y + startingYarr[indexToBuild]);
+      //     if (tempTile.buildingOwner == -1 && tempTile.floorId == 3) {
+      //       tempTile.setFloorId(0);
+      //       tempTile.infection = 0;
+      //     }
+      //   }
+      // }
+
+      socket.emit('joinSuccess', {startingX: startingXarr[indexToBuild], startingY: startingYarr[indexToBuild]});
     }
   }
 
