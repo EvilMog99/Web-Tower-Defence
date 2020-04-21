@@ -89,7 +89,7 @@ var allRecipes = [
   //{item index, amount}
   [[ItemStone, 5], [ItemIron, 5]], //0 - Anti Bacteria Turret
   [[ItemStone, 5], [ItemIron, 5]], //1 - Anti Player Turret
-  [[ItemCopper, 30], [ItemIron, 30]], //2 - Mining Base
+  [[ItemStone, 30], [ItemIron, 30]], //2 - Mining Base
   [[ItemCopper, 2], [ItemIron, 1]], //3 - Cables
   [[ItemCopper, 5], [ItemIron, 2]], //3 - Solar Panel
   [[ItemCopper, 10], [ItemStone, 30]], //3 - Coal Plant

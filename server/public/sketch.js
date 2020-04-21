@@ -49,9 +49,13 @@ var allScenes = [];
 
 var currentSceneId = 0;
 
+var mainCanvas;
 
 //key buttons and panels
-var panel_gameInstructions;//global panel storing instructions
+var panel_gameInstructionsP1;//global panel storing instructions
+var panel_gameInstructionsP2;//global panel storing instructions
+var allInstructionPanels = [];
+var panel_gameSettings;//panel storing game settings
 var pGameStats_button_invStone;
 var pGameStats_button_invIron;
 var pGameStats_button_invCopper;
@@ -69,7 +73,7 @@ var allRecipes = [
   //{item index, amount}
   [[ItemStone, 5], [ItemIron, 5]], //0 - Anti Bacteria Turret
   [[ItemStone, 5], [ItemIron, 5]], //1 - Anti Player Turret
-  [[ItemCopper, 30], [ItemIron, 30]], //2 - Mining Base
+  [[ItemStone, 30], [ItemIron, 30]], //2 - Mining Base
   [[ItemCopper, 2], [ItemIron, 1]], //3 - Cables
   [[ItemCopper, 5], [ItemIron, 2]], //3 - Solar Panel
   [[ItemCopper, 10], [ItemStone, 30]], //3 - Coal Plant
@@ -113,9 +117,12 @@ var flagOffsetX = 0.12 * tileWidth;
 var flagOffsetY = -0.45 * tileHeight;
 var flagWidth = (buildingWidth / 4) * 1.125;
 var flagHeight = (buildingHeight / 4) * 1.125;
+var mapZoom = 1;
 
 var panel_gameMenu;
 var playerPositionOutput;//button with text field to show the player's current location
+var scrnWidthOutput;
+var scrnHeightOutput;
 
 //work out the start and end index of tiles to draw to the screen
 var maxX;
@@ -271,7 +278,7 @@ function loadResources()
   var pStart_button_start = new GuiButton(0, 0, 0, 0, -200, 300, 100, allButtonFrames, buttonClick_startGame, -1, -1, 'Start Game', 32);
   panel_start.allButtons.push(pStart_button_start);
 
-  var pStart_button_instruct = new GuiButton(0, 0, 0, 0, -50, 300, 100, allButtonFrames, buttonClick_showInstructions, -1, -1, 'Instructions', 32);
+  var pStart_button_instruct = new GuiButton(0, 0, 0, 0, -50, 300, 100, allButtonFrames, buttonClick_showInstructionsP1, -1, -1, 'Instructions', 32);
   panel_start.allButtons.push(pStart_button_instruct);
 
   //setup game scene
@@ -280,10 +287,13 @@ function loadResources()
   //setup game right side panel
   panel_gameMenu = new GuiPanel(0, 325, 0, 250, 700, allPanelFrames);
   sceneGame.allGuiPanels[5].push(panel_gameMenu);
-  var pGameMenu_button_Quit = new GuiButton(0, 0, 0, 0, -270, 240, 50, allButtonFrames, buttonClick_openMenu, -1, -1, 'Quit', 20);
+  var pGameMenu_button_Quit = new GuiButton(0, 4, 0, 65, -270, 100, 50, allButtonFrames, buttonClick_openMenu, -1, -1, 'Quit', 20);
   panel_gameMenu.allButtons.push(pGameMenu_button_Quit);
 
-  var pGameMenu_button_Instructions = new GuiButton(0, 0, 0, 0, -210, 240, 50, allButtonFrames, buttonClick_showInstructions, -1, -1, 'Instructions', 20);
+  var pGameMenu_button_Settings = new GuiButton(0, 0, 0, -55, -270, 130, 50, allButtonFrames, buttonClick_openSettings, -1, -1, 'Settings', 20);
+  panel_gameMenu.allButtons.push(pGameMenu_button_Settings);
+
+  var pGameMenu_button_Instructions = new GuiButton(0, 0, 0, 0, -210, 240, 50, allButtonFrames, buttonClick_showInstructionsP1, -1, -1, 'Instructions', 20);
   panel_gameMenu.allButtons.push(pGameMenu_button_Instructions);
 
   //setup game purchase panel
@@ -294,7 +304,7 @@ function loadResources()
   //sceneGame.allGuiPanels[5].push(panel_gamePurchase);
   spacingY = -140;
   createBuildingButton(spacingX, spacingY, 0, 2, -1, 'Clear', 'Free', panel_gameMenu.allButtons, allBuildingButtons);
-  createBuildingButton(spacingX, spacingY, 1, 3, 0, 'Anti Batteria Turret', getBuildngCostAsString(0), panel_gameMenu.allButtons, allBuildingButtons);
+  createBuildingButton(spacingX, spacingY, 1, 3, 0, 'Anti Bacteria Turret', getBuildngCostAsString(0), panel_gameMenu.allButtons, allBuildingButtons);
   createBuildingButton(spacingX, spacingY, 2, 4, 1, 'Anti Player Turret', getBuildngCostAsString(1), panel_gameMenu.allButtons, allBuildingButtons);
   createBuildingButton(spacingX, spacingY, 3, 5, 2, 'Mining Turret', getBuildngCostAsString(2), panel_gameMenu.allButtons, allBuildingButtons);
   createBuildingButton(spacingX, spacingY, 4, 6, 3, 'Cables', getBuildngCostAsString(3), panel_gameMenu.allButtons, allBuildingButtons);
@@ -339,28 +349,83 @@ function loadResources()
   panel_gameStats.allButtons.push(pGameStats_button_invCoal);
 
 
+  //game settings
+  panel_gameSettings = new GuiPanel(0, 0, 0, 800, 800, allPanelFrames);
+  panel_gameSettings.visible = false;
+  sceneGame.allGuiPanels[6].push(panel_gameSettings);
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 0, 100, 200, 100, allButtonFrames, buttonClick_hideSettings, -1, -1, 'Ok', 32));
+
+  scrnWidthOutput = new GuiButton(0, 0, 0, 0, -160, 0, 0, allButtonFrames, -1, -1, -1
+    , 'Screen Width', 20);
+  panel_gameSettings.allButtons.push(scrnWidthOutput);
+
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 125, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth600, -1, -1
+    , '600', 14));
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 75, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth700, -1, -1
+    , '700', 14));
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 25, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth800, -1, -1
+    , '800', 14));
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -25, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth900, -1, -1
+    , '900', 14));
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -75, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth1000, -1, -1
+    , '1000', 14));
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -125, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth1100, -1, -1
+    , '1100', 14));
+
+  scrnHeightOutput = new GuiButton(0, 0, 0, 0, -60, 0, 0, allButtonFrames, -1, -1, -1
+      , 'Screen Height', 20);
+  panel_gameSettings.allButtons.push(scrnHeightOutput);
+
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 125, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight500, -1, -1
+    , '500', 14));
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 75, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight600, -1, -1
+    , '600', 14));
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 25, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight700, -1, -1
+    , '700', 14));
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -25, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight800, -1, -1
+    , '800', 14));
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -75, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight900, -1, -1
+    , '900', 14));
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -125, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight1000, -1, -1
+    , '1000', 14));
+
   //game instructions
-  panel_gameInstructions = new GuiPanel(0, 0, 0, 800, 800, allPanelFrames);
-  panel_gameInstructions.visible = false;
-  sceneGame.allGuiPanels[6].push(panel_gameInstructions);
-  sceneMenu.allGuiPanels[6].push(panel_gameInstructions);
-  var pGameInstructions_button_Close = new GuiButton(0, 0, 0, 0, 300, 200, 100, allButtonFrames, buttonClick_hideInstructions, -1, -1, 'Close', 32);
-  panel_gameInstructions.allButtons.push(pGameInstructions_button_Close);
+  panel_gameInstructionsP1 = new GuiPanel(0, 0, 0, 800, 800, allPanelFrames);
+  allInstructionPanels.push(panel_gameInstructionsP1);
+  panel_gameInstructionsP1.visible = false;
+  sceneGame.allGuiPanels[6].push(panel_gameInstructionsP1);
+  sceneMenu.allGuiPanels[6].push(panel_gameInstructionsP1);
+  panel_gameInstructionsP1.allButtons.push(new GuiButton(0, 0, 0, 240, 100, 180, 80, allButtonFrames, buttonClick_showInstructionsP2, -1, -1, 'Next ->', 32));
 
-  var pGameInstructions_button_instructText = new GuiButton(0, 0, 0, 0, -300, 0, 0, allButtonFrames, -1, -1, -1
+  var pGameInstructions_button_Close = new GuiButton(0, 0, 0, 0, 100, 200, 100, allButtonFrames, buttonClick_hideAllInstructions, -1, -1, 'Close', 32);
+  panel_gameInstructionsP1.allButtons.push(pGameInstructions_button_Close);
+
+  var pGameInstructions_button_instructText = new GuiButton(0, 0, 0, 0, -200, 0, 0, allButtonFrames, -1, -1, -1
     , 'Move Up: W     Move Down: S\nMove Left: A      Move Right: D', 28);
-  panel_gameInstructions.allButtons.push(pGameInstructions_button_instructText);
+  panel_gameInstructionsP1.allButtons.push(pGameInstructions_button_instructText);
 
-  panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, -220, 0, 0, allButtonFrames, -1, -1, -1
+  panel_gameInstructionsP1.allButtons.push(new GuiButton(0, 0, 0, 0, -120, 0, 0, allButtonFrames, -1, -1, -1
     , 'Bacteria are taking over the world! \nYour goal is to fight it off using Anti Bacteria Turrets', 20));
-  panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, -120, 0, 0, allButtonFrames, -1, -1, -1
+  panel_gameInstructionsP1.allButtons.push(new GuiButton(0, 0, 0, 0, -20, 0, 0, allButtonFrames, -1, -1, -1
     , 'Your resources are shown in the top panel next to their icons \nThese are used to pay for Buildings you place down \nYou can collect more by using Clear on the terrain', 20));
-  panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, -20, 0, 0, allButtonFrames, -1, -1, -1
+
+
+  panel_gameInstructionsP2 = new GuiPanel(0, 0, 0, 800, 800, allPanelFrames);
+  allInstructionPanels.push(panel_gameInstructionsP2);
+  panel_gameInstructionsP2.visible = false;
+  sceneGame.allGuiPanels[6].push(panel_gameInstructionsP2);
+  sceneMenu.allGuiPanels[6].push(panel_gameInstructionsP2);
+  panel_gameInstructionsP2.allButtons.push(new GuiButton(0, 0, 0, -240, 100, 180, 80, allButtonFrames, buttonClick_showInstructionsP1, -1, -1, '<- Previous', 32));
+
+  panel_gameInstructionsP2.allButtons.push(pGameInstructions_button_Close);
+
+  panel_gameInstructionsP2.allButtons.push(new GuiButton(0, 0, 0, 0, -200, 0, 0, allButtonFrames, -1, -1, -1
     , 'Left click the buttons on the right hand panel to select the \nBuilding you want to buy. Then left click on the map to place them \n(The Building costs are shown below each button)', 20));
-  panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, 80, 0, 0, allButtonFrames, -1, -1, -1
+  panel_gameInstructionsP2.allButtons.push(new GuiButton(0, 0, 0, 0, -120, 0, 0, allButtonFrames, -1, -1, -1
     , 'All Turrets require electricity to work - \nUse Buildings like Solar Panels to generate electricity', 20));
-  panel_gameInstructions.allButtons.push(new GuiButton(0, 0, 0, 0, 180, 0, 0, allButtonFrames, -1, -1, -1
+  panel_gameInstructionsP2.allButtons.push(new GuiButton(0, 0, 0, 0, -20, 0, 0, allButtonFrames, -1, -1, -1
     , 'Every Building conducts electricity slowly, \nbut to move it quickly you can connect your Buildings with Cables', 20));
+
 }
 
 function getBuildngCostAsString(buildingId) {
@@ -388,11 +453,15 @@ function createBuildingButton(spaceX, spaceY, posIndex, textureIndex, buildingIn
   buttonArrMain.push(new GuiButton(0, 0, 0, spaceX + 15, spaceY + 20, 0, 0, allButtonFrames, -1, -1, -1, 'Cost: ' + cost, 15));
 }
 
+function setCanvas() {
+  mainCanvas = createCanvas(canvasWidth, canvasHeight, WEBGL);
+}
+
 function setup()
 {
   player = new Player(2000, 25000, layer_character, 0, 0, 0);
   player.selectedItem = -2;//nothing selected
-  createCanvas(canvasWidth, canvasHeight, WEBGL);
+  setCanvas();
   //obj = new CollidableObject(allCollidables, 0, 'C', 150, 40, layer_character, 0, 0, 0, true, true, 100, 100);
   //obj_land = new CollidableObject(allCollidables, 1, 'T', 250, 40, 0, 0, 0, 0, true, true, 80, 100);
   //new CollidableObject(allCollidables, 2, 'T', 350, 40, 0, 0, 0, 0, false, true, 60, 120);
@@ -661,24 +730,32 @@ function draw()
 
   pop()
 
-  push()
-  //for (var i = 0; i < 10; i++)
-  {
-
-  }
-  pop()
-
-  push();
-  texture(testimg);
-  translate(100, 0, -100);
-  rotateX(30);
-  rotateY(50);
-  box(100);
-  pop();
+  // push()
+  // //for (var i = 0; i < 10; i++)
+  // {
+  //
+  // }
+  // pop()
+  //
+  // push();
+  // texture(testimg);
+  // translate(100, 0, -100);
+  // rotateX(30);
+  // rotateY(50);
+  // box(100);
+  // pop();
 
   push();
   translate(0, 0, 0);
   noStroke();
+
+  if (panel_gameSettings.visible) {
+    scrnWidthOutput.text = 'Screen Width - Currently: ' + canvasWidth;
+    scrnHeightOutput.text = 'Screen Height - Currently: ' + canvasHeight;
+  }
+
+  //update GUI positions based on the screen size
+  panel_gameMenu.x = (canvasWidth / 2) - 100;
 
   //draw current scene GUI
   tempGuiPanels = allScenes[currentSceneId].allGuiPanels;
@@ -1099,12 +1176,32 @@ var buttonClick_openMenu = function (button) {
 
 }
 
-var buttonClick_showInstructions = function (button) {
-  panel_gameInstructions.visible = true;
+var buttonClick_showInstructionsP1 = function (button) {
+  hideInstructions();
+  panel_gameInstructionsP1.visible = true;
 }
 
-var buttonClick_hideInstructions = function (button) {
-  panel_gameInstructions.visible = false;
+var buttonClick_showInstructionsP2 = function (button) {
+  hideInstructions();
+  panel_gameInstructionsP2.visible = true;
+}
+
+var buttonClick_hideAllInstructions = function (button) {
+  hideInstructions();
+}
+
+function hideInstructions() {
+  for (var i = 0; i < allInstructionPanels.length; i++) {
+    allInstructionPanels[i].visible = false;
+  }
+}
+
+var buttonClick_openSettings = function (button) {
+  panel_gameSettings.visible = true;
+}
+
+var buttonClick_hideSettings = function (button) {
+  panel_gameSettings.visible = false;
 }
 
 var buttonClick_selectBuildItem = function (button) {
@@ -1123,4 +1220,66 @@ var buttonClick_selectBuildItem = function (button) {
     //it is the same item as it selected so it should be unselected
     player.selectedItem = -2;//set to have nothing selected
   }
+}
+
+//set canvas width
+var buttonClick_setCanvasWidth600 = function (button) {
+  canvasWidth = 600;
+  setCanvas();
+}
+
+var buttonClick_setCanvasWidth700 = function (button) {
+  canvasWidth = 700;
+  setCanvas();
+}
+
+var buttonClick_setCanvasWidth800 = function (button) {
+  canvasWidth = 800;
+  setCanvas();
+}
+
+var buttonClick_setCanvasWidth900 = function (button) {
+  canvasWidth = 900;
+  setCanvas();
+}
+
+var buttonClick_setCanvasWidth1000 = function (button) {
+  canvasWidth = 1000;
+  setCanvas();
+}
+
+var buttonClick_setCanvasWidth1100 = function (button) {
+  canvasWidth = 1100;
+  setCanvas();
+}
+
+//set canvas height
+var buttonClick_setCanvasHeight500 = function (button) {
+  canvasHeight = 500;
+  setCanvas();
+}
+
+var buttonClick_setCanvasHeight600 = function (button) {
+  canvasHeight = 600;
+  setCanvas();
+}
+
+var buttonClick_setCanvasHeight700 = function (button) {
+  canvasHeight = 700;
+  setCanvas();
+}
+
+var buttonClick_setCanvasHeight800 = function (button) {
+  canvasHeight = 800;
+  setCanvas();
+}
+
+var buttonClick_setCanvasHeight900 = function (button) {
+  canvasHeight = 900;
+  setCanvas();
+}
+
+var buttonClick_setCanvasHeight1000 = function (button) {
+  canvasHeight = 1000;
+  setCanvas();
 }
