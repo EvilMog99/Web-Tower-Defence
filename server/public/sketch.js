@@ -123,6 +123,8 @@ var panel_gameMenu;
 var playerPositionOutput;//button with text field to show the player's current location
 var scrnWidthOutput;
 var scrnHeightOutput;
+var panel_selectGameInstance_StartButton;
+var panel_selectGameInstance;
 
 //work out the start and end index of tiles to draw to the screen
 var maxX;
@@ -140,6 +142,7 @@ var username = 'sam';
 var flagId = 22;
 var uniqueIdCode = 0;//unique code to identify user to server
 var interactCode = 0;//unique code identify users to each other
+var gameInstanceIndex = -1;
 
 //client opperations
 //...
@@ -359,35 +362,60 @@ function loadResources()
     , 'Screen Width', 20);
   panel_gameSettings.allButtons.push(scrnWidthOutput);
 
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 125, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth600, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 200, -120, 75, 40, allButtonFrames, buttonClick_setCanvasWidth600, -1, -1
     , '600', 14));
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 75, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth700, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 120, -120, 75, 40, allButtonFrames, buttonClick_setCanvasWidth700, -1, -1
     , '700', 14));
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 25, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth800, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 40, -120, 75, 40, allButtonFrames, buttonClick_setCanvasWidth800, -1, -1
     , '800', 14));
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -25, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth900, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -40, -120, 75, 40, allButtonFrames, buttonClick_setCanvasWidth900, -1, -1
     , '900', 14));
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -75, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth1000, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -120, -120, 75, 40, allButtonFrames, buttonClick_setCanvasWidth1000, -1, -1
     , '1000', 14));
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -125, -120, 80, 40, allButtonFrames, buttonClick_setCanvasWidth1100, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -200, -120, 75, 40, allButtonFrames, buttonClick_setCanvasWidth1100, -1, -1
     , '1100', 14));
 
   scrnHeightOutput = new GuiButton(0, 0, 0, 0, -60, 0, 0, allButtonFrames, -1, -1, -1
       , 'Screen Height', 20);
   panel_gameSettings.allButtons.push(scrnHeightOutput);
 
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 125, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight500, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 200, -20, 75, 40, allButtonFrames, buttonClick_setCanvasHeight500, -1, -1
     , '500', 14));
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 75, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight600, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 120, -20, 75, 40, allButtonFrames, buttonClick_setCanvasHeight600, -1, -1
     , '600', 14));
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 25, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight700, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, 40, -20, 75, 40, allButtonFrames, buttonClick_setCanvasHeight700, -1, -1
     , '700', 14));
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -25, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight800, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -40, -20, 75, 40, allButtonFrames, buttonClick_setCanvasHeight800, -1, -1
     , '800', 14));
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -75, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight900, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -120, -20, 75, 40, allButtonFrames, buttonClick_setCanvasHeight900, -1, -1
     , '900', 14));
-  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -125, -20, 80, 40, allButtonFrames, buttonClick_setCanvasHeight1000, -1, -1
+  panel_gameSettings.allButtons.push(new GuiButton(0, 0, 0, -200, -20, 75, 40, allButtonFrames, buttonClick_setCanvasHeight1000, -1, -1
     , '1000', 14));
+
+
+  //Game Instance selector
+  panel_selectGameInstance = new GuiPanel(0, 0, 0, 800, 800, allPanelFrames);
+  panel_selectGameInstance.visible = false;
+  sceneGame.allGuiPanels[6].push(panel_selectGameInstance);
+  panel_selectGameInstance_StartButton = new GuiButton(0, 0, 0, 0, 100, 200, 100, allButtonFrames, buttonClick_selectGameInstance, -1, -1, 'Click to Start!', 32);
+  panel_selectGameInstance_StartButton.visible = false;
+  panel_selectGameInstance.allButtons.push(panel_selectGameInstance_StartButton);
+
+  panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, 0, -160, 0, 0, allButtonFrames, -1, -1, -1
+    , 'Choose which Game Instance you\'d like to join', 20));
+
+  panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, 200, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance00, -1, -1
+    , 'Session 1', 14));
+  panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, 120, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance01, -1, -1
+    , 'Session 2', 14));
+  panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, 40, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance02, -1, -1
+    , 'Session 3', 14));
+  panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, -40, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance03, -1, -1
+    , 'Session 4', 14));
+  panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, -120, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance04, -1, -1
+    , 'Session 5', 14));
+  panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, -200, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance05, -1, -1
+    , 'Session 6', 14));
 
   //game instructions
   panel_gameInstructionsP1 = new GuiPanel(0, 0, 0, 800, 800, allPanelFrames);
@@ -580,6 +608,7 @@ function timedUpdate() {
   if (timerToNextSendMessage <= 0 || player.requestPlace) {
     var updateFromClient = {
       message: 'hia',
+      gameInstanceIndex: gameInstanceIndex,
       uniqueIdCode: uniqueIdCode,
       command: -1,
       currentX: player.locX,
@@ -603,6 +632,7 @@ function joinGame(name, flagId, uniqueIdCode, interactCode){
     flagId: flagId,
     uniqueIdCode: uniqueIdCode,
     interactCode: interactCode,
+    gameInstanceIndex: gameInstanceIndex
   }
   socket.emit('newClient', data);
 }
@@ -622,6 +652,12 @@ function joinFail(data) {
     uniqueIdCode = random(100000);
     interactCode = random(100000);
     joinGame(username, flagId, uniqueIdCode, interactCode);
+  }
+  else if (data.reason == 'full GameInstance') {
+    //the GameInstance was full - the player needs to choose a different one
+    //open session selection screen again
+    panel_selectGameInstance.visible = true;
+    panel_selectGameInstance_StartButton.visible = false;
   }
 }
 
@@ -1168,7 +1204,37 @@ var buttonClick_startGame = function (button) {
   openNewScene(1);
   uniqueIdCode = random(100000);
   interactCode = 8;
+  panel_selectGameInstance.visible = true;
+}
+
+var buttonClick_selectGameInstance = function (button) {
+  panel_selectGameInstance.visible = false;
   joinGame(username, flagId, uniqueIdCode, interactCode);//may move to a different intermediate scene for flag choosing
+}
+
+var buttonClick_selectGameInstance00 = function (button) {
+  gameInstanceIndex = 0;
+  panel_selectGameInstance_StartButton.visible = true;
+}
+var buttonClick_selectGameInstance01 = function (button) {
+  gameInstanceIndex = 1;
+  panel_selectGameInstance_StartButton.visible = true;
+}
+var buttonClick_selectGameInstance02 = function (button) {
+  gameInstanceIndex = 2;
+  panel_selectGameInstance_StartButton.visible = true;
+}
+var buttonClick_selectGameInstance03 = function (button) {
+  gameInstanceIndex = 3;
+  panel_selectGameInstance_StartButton.visible = true;
+}
+var buttonClick_selectGameInstance04 = function (button) {
+  gameInstanceIndex = 4;
+  panel_selectGameInstance_StartButton.visible = true;
+}
+var buttonClick_selectGameInstance05 = function (button) {
+  gameInstanceIndex = 5;
+  panel_selectGameInstance_StartButton.visible = true;
 }
 
 var buttonClick_openMenu = function (button) {
