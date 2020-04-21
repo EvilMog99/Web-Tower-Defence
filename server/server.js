@@ -130,7 +130,7 @@ function newConnection(socket) {
           //add player to game
           gameInstance.playerIndex++;
           console.log('Client: ' + socket.id + ' Will be added to the game with IdCode: ' + data.uniqueIdCode + ' InteractCode: ' + data.interactCode);
-          gameInstance.allPlayers.push(new Player(socket, data.name, gameInstance.playerIndex, Math.floor(Math.random() * NumberOfFlags), data.uniqueIdCode, data.interactCode));
+          gameInstance.addPlayer(new Player(socket, data.name, gameInstance.playerIndex, Math.floor(Math.random() * NumberOfFlags), data.uniqueIdCode, data.interactCode));
           //have a set number of attempts to set a random player starting position
           var startingXarr = [];
           var startingYarr = [];
@@ -230,7 +230,7 @@ class GameInstance {
     this.allPlayers = [];
     this.serverActive = false; //whether the server is active or not
     //setup and start timer to run GameInstance manager
-    this.gameInstanceManagerTimer = setInterval(this.gameInstanceUpdate, 100);
+    this.gameInstanceManagerTimer = setInterval(this.gameInstanceUpdate.bind(this), 100);
     console.log('Constructed new GameInstance at index: ' + this.gameInstanceId);
     this.setupNewGame();
   }
@@ -297,13 +297,18 @@ class GameInstance {
   }
 
   startGame() {
-    this.gameTimer = setInterval(this.timedUpdate, 100);
-    this.cableTimer = setInterval(this.cableUpdate, 100);
+    this.gameTimer = setInterval(this.timedUpdate.bind(this), 100);
+    this.cableTimer = setInterval(this.cableUpdate.bind(this), 100);
   }
 
   stopGame() {
     clearInterval(this.gameTimer);
     clearInterval(this.cableTimer);
+  }
+
+  addPlayer(pl) {
+    this.allPlayers.push(pl);
+    console.log('Added new player to GI: ' + this.gameInstanceId);
   }
 
   getPlayerByInteractCode(testCode) {
@@ -319,6 +324,8 @@ class GameInstance {
 
   //game instance manager
   gameInstanceUpdate() {
+    console.log('GI: ' + this.gameInstanceId);
+    console.log(' allPlayer length: ' + this.allPlayers.length);
     if (this.allPlayers === undefined || this.allPlayers.length == 0)  this.serverActive = false;
     else this.serverActive = true;
   }
@@ -361,9 +368,11 @@ class GameInstance {
   }
 
   timedUpdate() {
+    console.log('server active: ' + this.serverActive);
     if (this.gameNumberOfCycles > 0) this.gameNumberOfCycles -= 0.1;//countdown game timer to progress the game
 
     if (!this.timedUpdate_running && this.serverActive) {
+      console.log('Running game');
       this.timedUpdate_running = true;
       this.tileUpdate = [];
       this.projectileUpdate = [];
@@ -990,7 +999,7 @@ class Tile {
       break;
 
       case 3: //infection
-      this.tempNeighbourTiles = getNeighbouringTiles(this.x, this.y);
+      this.tempNeighbourTiles = this.getNeighbouringTiles(this.x, this.y);
       //var surroundingInfection = true;
       //infect nearby tiles
       for (var i = 0; i < this.tempNeighbourTiles.length; i++) {
