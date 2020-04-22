@@ -116,21 +116,21 @@ function newConnection(socket) {
   function newClient(data) {
     //register new player
     if (testGameInstanceExists(data.gameInstanceIndex)) {
-      var gameInstance = allGameInstances[data.gameInstanceIndex];
+      var tempGameInstance = allGameInstances[data.gameInstanceIndex];
       //test if this gameinstance is full
-      if (gameInstance.allPlayers.length >= MaxNumberOfPlayersPerGI) {
+      if (tempGameInstance.allPlayers.length >= MaxNumberOfPlayersPerGI) {
         socket.emit('joinFail', {reason: 'full GameInstance'});
       }
       else {
-        if (gameInstance.getPlayerByIdCode(data.uniqueIdCode) || gameInstance.getPlayerByInteractCode(data.interactCode)) {
+        if (tempGameInstance.getPlayerByIdCode(data.uniqueIdCode) || tempGameInstance.getPlayerByInteractCode(data.interactCode)) {
           console.log('Client: ' + socket.id + ' Has same ID as existing use IdCode: ' + data.uniqueIdCode + ' InteractCode: ' + data.interactCode);
           socket.emit('joinFail', {reason: 'taken code'});
         }
         else {
           //add player to game
-          gameInstance.playerIndex++;
+          tempGameInstance.playerIndex++;
           console.log('Client: ' + socket.id + ' Will be added to the game with IdCode: ' + data.uniqueIdCode + ' InteractCode: ' + data.interactCode);
-          gameInstance.addPlayer(new Player(socket, data.name, gameInstance.playerIndex, Math.floor(Math.random() * NumberOfFlags), data.uniqueIdCode, data.interactCode));
+          tempGameInstance.addPlayer(new Player(tempGameInstance, socket, data.name, tempGameInstance.playerIndex, Math.floor(Math.random() * NumberOfFlags), data.uniqueIdCode, data.interactCode));
           //have a set number of attempts to set a random player starting position
           var startingXarr = [];
           var startingYarr = [];
@@ -143,7 +143,7 @@ function newConnection(socket) {
             for (var x = -5; x < 5; x++) {
               for (var y = -5; y < 5; y++) {
                 //add fault points for every tile with another user's structure on it
-                if (gameInstance.getTileIndexed(x + startingXarr[i], y + startingYarr[i]).buildingOwner == -1) areaFaultsArr[i]++;
+                if (tempGameInstance.getTileIndexed(x + startingXarr[i], y + startingYarr[i]).buildingOwner == -1) areaFaultsArr[i]++;
               }
             }
             //break loop with location to build if a good spot has been found
@@ -186,9 +186,9 @@ function newConnection(socket) {
   //io.sockets.emit('updateFromServer', retData);
   function receivedUserUpdate(data) {
     if (testGameInstanceExists(data.gameInstanceIndex)) {
-      gameInstance = allGameInstances[data.gameInstanceIndex];
+      tempGameInstance = allGameInstances[data.gameInstanceIndex];
       //find player
-      var playerAccount = gameInstance.getPlayerByIdCode(data.uniqueIdCode);
+      var playerAccount = tempGameInstance.getPlayerByIdCode(data.uniqueIdCode);
 
       //update server side player with client side data
       if (playerAccount) {
@@ -232,6 +232,7 @@ class GameInstance {
     //setup and start timer to run GameInstance manager
     this.gameInstanceManagerTimer = setInterval(this.gameInstanceUpdate.bind(this), 100);
     console.log('Constructed new GameInstance at index: ' + this.gameInstanceId);
+    //start GameInstance running
     this.setupNewGame();
   }
 
@@ -266,7 +267,7 @@ class GameInstance {
     for (var x = 0; x < WldWidth; x++) {
       this.allTiles[x] = [];
       for (var y = 0; y < WldHeight; y++) {
-        this.allTiles[x][y] = new Tile(0, x, y);
+        this.allTiles[x][y] = new Tile(this, 0, x, y);
       }
     }
 
@@ -296,6 +297,14 @@ class GameInstance {
     console.log('Started new game in GameInstance: ' + this.gameInstanceId);
   }
 
+  //game instance manager
+  gameInstanceUpdate() {
+    console.log('GI: ' + this.gameInstanceId);
+    console.log(' allPlayer length: ' + this.allPlayers.length);
+    if (this.allPlayers === undefined || this.allPlayers.length == 0)  this.serverActive = false;
+    else this.serverActive = true;
+  }
+
   startGame() {
     this.gameTimer = setInterval(this.timedUpdate.bind(this), 100);
     this.cableTimer = setInterval(this.cableUpdate.bind(this), 100);
@@ -322,13 +331,7 @@ class GameInstance {
     return false;
   }
 
-  //game instance manager
-  gameInstanceUpdate() {
-    console.log('GI: ' + this.gameInstanceId);
-    console.log(' allPlayer length: ' + this.allPlayers.length);
-    if (this.allPlayers === undefined || this.allPlayers.length == 0)  this.serverActive = false;
-    else this.serverActive = true;
-  }
+
 
   //game logic
   testCableBuildings(buildingId) {
@@ -406,9 +409,9 @@ class GameInstance {
           for (var i = 0; i < this.allProjectiles.length; i++) {
             if (this.allProjectiles[i].id == -1) {
               //test to see if the turret that fired it wants to fire another
-              var tempTile = getTileIndexed(this.allProjectiles[i].startX, this.allProjectiles[i].startY);
+              var tempTile = this.getTileIndexed(this.allProjectiles[i].startX, this.allProjectiles[i].startY);
               if (tempTile.buildingId == 0 || tempTile.buildingId == 1 || tempTile.buildingId == 2) {
-                tempTile.updateTile();
+                tempTile.updateTile(this);
               }
               //splice projectile out of array
               this.allProjectiles.splice(i, 1);
@@ -431,7 +434,7 @@ class GameInstance {
         else this.tileUpdateX++;
 
         //console.log('Updating tile: x' + tileUpdateX + ' y: ' + tileUpdateY);
-        this.allTiles[this.tileUpdateX][this.tileUpdateY].updateTile();
+        this.allTiles[this.tileUpdateX][this.tileUpdateY].updateTile(this);
         //add tile to list of tiles to be sent to clients
         this.tileUpdate.push(this.allTiles[this.tileUpdateX][this.tileUpdateY].createTileToSend());
       }
@@ -476,7 +479,7 @@ class GameInstance {
           console.log('Deleted player at index: ' + this.indexToDelete);
         }
       }
-      timedUpdate_running = false;
+      this.timedUpdate_running = false;
     }
   }
 
@@ -488,8 +491,8 @@ class GameInstance {
       playerData: player.createPlayerToSend()
     };
 
-    for (var i = 0; i < allPlayers.length; i++) {
-      retData.allPlayers.push(allPlayers[i].createPlayerToSend());
+    for (var i = 0; i < this.allPlayers.length; i++) {
+      retData.allPlayers.push(this.allPlayers[i].createPlayerToSend());
     }
 
     /*for (var x = -player.canvasWidth/2; x < player.canvasWidth/2; x++) {
@@ -534,6 +537,19 @@ class GameInstance {
 
     return ret;
   }
+
+  // //get array of all 4 tiles near current location - in co-ordinates
+  // const unboundA = function a(x, y) {
+  //   var ret = [];
+  //   ret[0] = this.getTileIndexed(x + 1, y);
+  //   ret[1] = this.getTileIndexed(x - 1, y);
+  //   ret[2] = this.getTileIndexed(x, y + 1);
+  //   ret[3] = this.getTileIndexed(x, y - 1);
+  //
+  //   return ret;
+  // }
+  //
+  // this.getNeighbouringTiles = unboundA.bind(this);
 
   giveResources(player, buildingId, modifier) {
     switch (buildingId) {
@@ -684,7 +700,7 @@ class GameInstance {
 
     //if a target was found?
     if (foundTarget || foundLessaTarget) {
-      this.allProjectiles.push(new Projectile(projId, tile.x, tile.y, tile.x + targetX, tile.y + targetY));
+      this.allProjectiles.push(new Projectile(this, projId, tile.x, tile.y, tile.x + targetX, tile.y + targetY));
       //Set tile so it can't be targeted again for another 2 rounds of processing
       this.getTileIndexed(tile.x + targetX, tile.y + targetY).projTargeted = 2;
       return true;
@@ -713,7 +729,8 @@ class GameInstance {
 }
 
 class Player {
-  constructor(socket, name, id, flagId, uniqueIdCode, interactCode) {
+  constructor(gameInstance, socket, name, id, flagId, uniqueIdCode, interactCode) {
+    this.gameInstance = gameInstance;
     this.name = name;
     this.id = id;
     this.flagId = flagId;//flagId;
@@ -810,7 +827,8 @@ class Player {
 }
 
 class Projectile {
-  constructor(id, startX, startY, targetX, targetY) {
+  constructor(gameInstance, id, startX, startY, targetX, targetY) {
+    this.gameInstance = gameInstance;
     this.id = id;
     this.x = startX;
     this.y = startY;
@@ -829,19 +847,19 @@ class Projectile {
       var tempSetId = -1;//to set this projectile's id after it's been processed at its destination
       switch (this.id) {
         case 0:// Anti Bacteria
-        getTileIndexed(this.targetX, this.targetY).cureBacteria();
+        this.gameInstance.getTileIndexed(this.targetX, this.targetY).cureBacteria();
         //add tile to list of tiles to be updated on clients
-        tileUpdate.push(getTileIndexed(this.targetX, this.targetY).createTileToSend());
+        tileUpdate.push(this.gameInstance.getTileIndexed(this.targetX, this.targetY).createTileToSend());
         break;
 
         case 1:// Anti Player
-        getTileIndexed(this.targetX, this.targetY).takeDamage(40);
+        this.gameInstance.getTileIndexed(this.targetX, this.targetY).takeDamage(40);
         //add tile to list of tiles to be updated on clients
-        tileUpdate.push(getTileIndexed(this.targetX, this.targetY).createTileToSend());
+        tileUpdate.push(this.gameInstance.getTileIndexed(this.targetX, this.targetY).createTileToSend());
         break;
 
         case 2:// Mining
-        var tempTile = getTileIndexed(this.targetX, this.targetY);
+        var tempTile = this.gameInstance.getTileIndexed(this.targetX, this.targetY);
         if (tempTile.buildingId == 6 || tempTile.buildingId == 7
             || tempTile.buildingId == 8 || tempTile.buildingId == 9
             || tempTile.buildingId == 10) {
@@ -886,7 +904,7 @@ class Projectile {
 
           tempTile.takeDamage(10);
           //add tile to list of tiles to be updated on clients
-          tileUpdate.push(getTileIndexed(this.targetX, this.targetY).createTileToSend());
+          tileUpdate.push(this.gameInstance.getTileIndexed(this.targetX, this.targetY).createTileToSend());
         }
         break;
 
@@ -924,9 +942,9 @@ class Projectile {
   }
 
   addToPlayerInv(buildingIdBasedOnOre) {
-    var tempPlayer = getPlayerByIdCode(getTileIndexed(this.targetX, this.targetY).buildingOwner);
+    var tempPlayer = this.gameInstance.getPlayerByIdCode(this.gameInstance.getTileIndexed(this.targetX, this.targetY).buildingOwner);
     if (tempPlayer) {
-      giveResources(tempPlayer, buildingIdBasedOnOre, 0.2);
+      this.gameInstance.giveResources(tempPlayer, buildingIdBasedOnOre, 0.2);
     }
   }
 
@@ -940,7 +958,8 @@ class Projectile {
 }
 
 class Tile {
-  constructor(floorId, x, y) {
+  constructor(gameInstance, floorId, x, y) {
+    this.gameInstance = gameInstance;
     this.floorId = floorId;
     this.floodAnimation = 0;
     this.buildingId = -1;
@@ -999,7 +1018,7 @@ class Tile {
       break;
 
       case 3: //infection
-      this.tempNeighbourTiles = this.getNeighbouringTiles(this.x, this.y);
+      this.tempNeighbourTiles = this.gameInstance.getNeighbouringTiles(this.x, this.y);
       //var surroundingInfection = true;
       //infect nearby tiles
       for (var i = 0; i < this.tempNeighbourTiles.length; i++) {
@@ -1099,13 +1118,13 @@ class Tile {
 
   updateProjectileCreationState(projId) {
     if (this.buildingMakeProjectileTimer >= BuildProjectileTimerMax) {
-      if (createProjectile(projId, this))//if a projectile was created?
+      if (this.gameInstance.createProjectile(projId, this))//if a projectile was created?
         this.buildingMakeProjectileTimer = 0;//reset timer
     }
   }
 
   shareElectricity() {
-    this.tempNeighbourTiles = getNeighbouringTiles(this.x, this.y);
+    this.tempNeighbourTiles = this.gameInstance.getNeighbouringTiles(this.x, this.y);
     for (var i = 0; i < this.tempNeighbourTiles.length; i++) {
       if (this.tempNeighbourTiles[i].canShareElectricity) {
         this.electricity = (this.electricity / 2) + (this.tempNeighbourTiles[i].electricity / 2);
@@ -1131,11 +1150,11 @@ class Tile {
   setBuildingId(id, owner) {
     //add to allCables if it is a cable
     if (id == 3) {
-      addToAllCables(this);
+      this.gameInstance.addToAllCables(this);
     }
     //if the buildingId about to be overwritten is cables?
     else if (this.buildingId == 3) {
-      allCablesRemoveRequests.push(this);
+      this.gameInstance.allCablesRemoveRequests.push(this);
     }
     this.buildingId = id;
     this.buildingAnimation = 0;
@@ -1152,7 +1171,7 @@ class Tile {
 
     //if this is an important building set its buildingAnimation to show the owner's flag
     if (this.buildingId == 0 || this.buildingId == 1 || this.buildingId == 2) {
-      this.buildingFlagId = getPlayerByIdCode(this.buildingOwner).flagId;
+      this.buildingFlagId = this.gameInstance.getPlayerByIdCode(this.buildingOwner).flagId;
     }
     else {
       this.buildingFlagId = -1;//set no building flag
