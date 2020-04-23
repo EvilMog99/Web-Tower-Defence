@@ -101,6 +101,7 @@ var cableEnd_up = [];
 var cableEnd_down = [];
 var cableEnd_left = [];
 var cableEnd_right = [];
+var allGameInstancesInfoOutput = [];
 
 var wldWidth = 255;
 var wldHeight = 255;
@@ -406,16 +407,39 @@ function loadResources()
 
   panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, 200, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance00, -1, -1
     , 'Session 1', 14));
+  allGameInstancesInfoOutput[0] = new GuiButton(0, 0, 0, 200, -100, 0, 0, allButtonFrames, buttonClick_selectGameInstance00, -1, -1
+    , 'Data', 12);
+  panel_selectGameInstance.allButtons.push(allGameInstancesInfoOutput[0]);
+
   panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, 120, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance01, -1, -1
     , 'Session 2', 14));
+  allGameInstancesInfoOutput[1] = new GuiButton(0, 0, 0, 120, -100, 0, 0, allButtonFrames, buttonClick_selectGameInstance00, -1, -1
+    , 'Data', 12);
+  panel_selectGameInstance.allButtons.push(allGameInstancesInfoOutput[1]);
+
   panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, 40, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance02, -1, -1
     , 'Session 3', 14));
+  allGameInstancesInfoOutput[2] = new GuiButton(0, 0, 0, 40, -100, 0, 0, allButtonFrames, buttonClick_selectGameInstance00, -1, -1
+    , 'Data', 12);
+  panel_selectGameInstance.allButtons.push(allGameInstancesInfoOutput[2]);
+
   panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, -40, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance03, -1, -1
     , 'Session 4', 14));
+  allGameInstancesInfoOutput[3] = new GuiButton(0, 0, 0, -40, -100, 0, 0, allButtonFrames, buttonClick_selectGameInstance00, -1, -1
+    , 'Data', 12);
+  panel_selectGameInstance.allButtons.push(allGameInstancesInfoOutput[3]);
+
   panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, -120, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance04, -1, -1
     , 'Session 5', 14));
+  allGameInstancesInfoOutput[4] = new GuiButton(0, 0, 0, -120, -100, 0, 0, allButtonFrames, buttonClick_selectGameInstance00, -1, -1
+    , 'Data', 12);
+  panel_selectGameInstance.allButtons.push(allGameInstancesInfoOutput[4]);
+
   panel_selectGameInstance.allButtons.push(new GuiButton(0, 0, 0, -200, -120, 75, 40, allButtonFrames, buttonClick_selectGameInstance05, -1, -1
     , 'Session 6', 14));
+  allGameInstancesInfoOutput[5] = new GuiButton(0, 0, 0, -200, -100, 0, 0, allButtonFrames, buttonClick_selectGameInstance00, -1, -1
+    , 'Data', 12);
+  panel_selectGameInstance.allButtons.push(allGameInstancesInfoOutput[5]);
 
   //game instructions
   panel_gameInstructionsP1 = new GuiPanel(0, 0, 0, 800, 800, allPanelFrames);
@@ -522,6 +546,7 @@ function setup()
 
     //setup socket connection to server
   socket = io.connect(serverAddress);
+  socket.on('returnedServerInfo', recievedServerInfo);
   socket.on('joinSuccess', joinSuccess);
   socket.on('joinFail', joinFail);
   socket.on('updateFromServer', updateFromServer);
@@ -635,6 +660,15 @@ function joinGame(name, flagId, uniqueIdCode, interactCode){
     gameInstanceIndex: gameInstanceIndex
   }
   socket.emit('newClient', data);
+}
+
+function recievedServerInfo(data) {
+  console.log('Received Server Info');
+  if (data.allGameInstancesInfo !== undefined) {
+    for (var i = 0; i < data.allGameInstancesInfo.length; i++) {
+      allGameInstancesInfoOutput[i].text = 'Players ' + data.allGameInstancesInfo[i].currentNumberOfPlayers + '/' + data.allGameInstancesInfo[i].maxNumberOfPlayers;
+    }
+  }
 }
 
 function joinSuccess(data) {
@@ -1205,6 +1239,7 @@ var buttonClick_startGame = function (button) {
   uniqueIdCode = random(100000);
   interactCode = 8;
   panel_selectGameInstance.visible = true;
+  socket.emit('requestServerInfo', {});//reset data about the server
 }
 
 var buttonClick_selectGameInstance = function (button) {

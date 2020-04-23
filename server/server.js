@@ -89,7 +89,7 @@ var NumberOfFlags = 11;//number of different flags in game
 
 var allGameInstances = [];
 var MaxNumberOfGameInstances = 6;
-var MaxNumberOfPlayersPerGI = 2;
+var MaxNumberOfPlayersPerGI = 20;
 function testGameInstanceExists(index) {
   if (allGameInstances[index] !== undefined) return true;
   return false;
@@ -110,8 +110,20 @@ function init() {
 function newConnection(socket) {
   console.log('New Connection on Socket: ' + socket.id);
 
+  socket.on('requestServerInfo', requestServerInfo);
   socket.on('newClient', newClient);
   socket.on('updateFromClient', receivedUserUpdate);
+
+  function requestServerInfo(data) {
+    var tempGIinfo = [];
+    for (var i = 0; i < allGameInstances.length; i++) {
+      tempGIinfo[i] = allGameInstances[i].createGameInstaceInfoToSend();
+    }
+    var ret = {
+      allGameInstancesInfo: tempGIinfo
+    };
+    socket.emit('returnedServerInfo', ret);
+  }
 
   function newClient(data) {
     //register new player
@@ -725,6 +737,14 @@ class GameInstance {
     //take the random ore if inv is not at max
     if (player.inventory[invId] < 500) return true;
     return false;
+  }
+
+  createGameInstaceInfoToSend() {
+    return {
+      maxNumberOfPlayers: MaxNumberOfPlayersPerGI,
+      currentNumberOfPlayers: this.allPlayers.length,
+
+    };
   }
 }
 
