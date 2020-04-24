@@ -311,10 +311,16 @@ class GameInstance {
 
   //game instance manager
   gameInstanceUpdate() {
-    console.log('GI: ' + this.gameInstanceId);
-    console.log(' allPlayer length: ' + this.allPlayers.length);
+    //console.log('GI: ' + this.gameInstanceId);
+    //console.log(' allPlayer length: ' + this.allPlayers.length);
     if (this.allPlayers === undefined || this.allPlayers.length == 0)  this.serverActive = false;
     else this.serverActive = true;
+
+    //if there's no one online restart world
+    if ((!this.serverActive && this.gameNumberOfCycles < GameMaxNumberOfCycles) && this.allPlayers.length == 0) {
+      console.log('No players, restarting Game Instance: ' + this.gameInstanceId);
+      this.setupNewGame();
+    }
   }
 
   startGame() {
@@ -383,11 +389,11 @@ class GameInstance {
   }
 
   timedUpdate() {
-    console.log('server active: ' + this.serverActive);
-    if (this.gameNumberOfCycles > 0) this.gameNumberOfCycles -= 0.1;//countdown game timer to progress the game
+    //console.log('server active: ' + this.serverActive);
+    if (this.gameNumberOfCycles > 0 && this.serverActive) this.gameNumberOfCycles -= 0.1;//countdown game timer to progress the game
 
     if (!this.timedUpdate_running && this.serverActive) {
-      console.log('Running game');
+      //console.log('Running game');
       this.timedUpdate_running = true;
       this.tileUpdate = [];
       this.projectileUpdate = [];
@@ -796,7 +802,7 @@ class Player {
   update() {
     if (this.receievedClientMessage) {
       this.receievedClientMessage = false;
-      this.connectionTimer = 1000;
+      this.connectionTimer = 100;
     }
     else {
       this.connectionTimer--;
