@@ -159,8 +159,9 @@ function preload()
 function loadResources()
 {
   //load music
-  menuMusic = loadSound('music/Zefz - TheLoomingBattle/TheLoomingBattle.ogg');
+  //menuMusic = loadSound('music/Zefz - TheLoomingBattle/TheLoomingBattle.ogg');
   gameMusic = loadSound('music/Mega Pixel Music Lab - Battle Theme 2 v1.2/Battle Theme II v1.2.wav');
+  menuMusic = gameMusic;
 
   //load fonts
   basicFont = loadFont('fonts/raidercrusader.ttf');
@@ -722,7 +723,6 @@ function joinFail(data) {
     //the GameInstance was full - the player needs to choose a different one
     //open session selection screen again
     panel_selectGameInstance.visible = true;
-    panel_selectGameInstance_StartButton.visible = false;
   }
 }
 
@@ -1275,6 +1275,7 @@ var buttonClick_startGame = function (button) {
 
 var buttonClick_selectGameInstance = function (button) {
   panel_selectGameInstance.visible = false;
+  panel_selectGameInstance_StartButton.visible = false;
   joinGame(username, flagId, uniqueIdCode, interactCode);//may move to a different intermediate scene for flag choosing
 }
 
