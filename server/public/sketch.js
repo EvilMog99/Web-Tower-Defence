@@ -54,6 +54,7 @@ var mainCanvas;
 //key buttons and panels
 var panel_gameInstructionsP1;//global panel storing instructions
 var panel_gameInstructionsP2;//global panel storing instructions
+var panel_gameCredits;//global panel storing credits
 var allInstructionPanels = [];
 var panel_gameSettings;//panel storing game settings
 var pGameStats_button_invStone;
@@ -158,8 +159,8 @@ function preload()
 function loadResources()
 {
   //load music
-  menuMusic = loadSound('music/Autumn Lullaby.wav');
-  gameMusic = loadSound('music/Autumn Lullaby.wav');
+  menuMusic = loadSound('music/Zefz - TheLoomingBattle/TheLoomingBattle.ogg');
+  gameMusic = loadSound('music/Mega Pixel Music Lab - Battle Theme 2 v1.2/Battle Theme II v1.2.wav');
 
   //load fonts
   basicFont = loadFont('fonts/raidercrusader.ttf');
@@ -284,6 +285,9 @@ function loadResources()
 
   var pStart_button_instruct = new GuiButton(0, 0, 0, 0, -50, 300, 100, allButtonFrames, buttonClick_showInstructionsP1, -1, -1, 'Instructions', 32);
   panel_start.allButtons.push(pStart_button_instruct);
+
+  var pStart_button_credits = new GuiButton(0, 0, 0, 0, 100, 300, 100, allButtonFrames, buttonClick_showCredits, -1, -1, 'Credits', 32);
+  panel_start.allButtons.push(pStart_button_credits);
 
   //setup game scene
   sceneGame = new Scene(); allScenes[1] = sceneGame;
@@ -447,7 +451,7 @@ function loadResources()
   panel_gameInstructionsP1.visible = false;
   sceneGame.allGuiPanels[6].push(panel_gameInstructionsP1);
   sceneMenu.allGuiPanels[6].push(panel_gameInstructionsP1);
-  panel_gameInstructionsP1.allButtons.push(new GuiButton(0, 0, 0, 240, 100, 180, 80, allButtonFrames, buttonClick_showInstructionsP2, -1, -1, 'Next ->', 32));
+  panel_gameInstructionsP1.allButtons.push(new GuiButton(0, 0, 0, 240, 100, 180, 80, allButtonFrames, buttonClick_showInstructionsP2, -1, -1, 'Next', 32));
 
   var pGameInstructions_button_Close = new GuiButton(0, 0, 0, 0, 100, 200, 100, allButtonFrames, buttonClick_hideAllInstructions, -1, -1, 'Close', 32);
   panel_gameInstructionsP1.allButtons.push(pGameInstructions_button_Close);
@@ -467,7 +471,7 @@ function loadResources()
   panel_gameInstructionsP2.visible = false;
   sceneGame.allGuiPanels[6].push(panel_gameInstructionsP2);
   sceneMenu.allGuiPanels[6].push(panel_gameInstructionsP2);
-  panel_gameInstructionsP2.allButtons.push(new GuiButton(0, 0, 0, -240, 100, 180, 80, allButtonFrames, buttonClick_showInstructionsP1, -1, -1, '<- Previous', 32));
+  panel_gameInstructionsP2.allButtons.push(new GuiButton(0, 0, 0, -240, 100, 180, 80, allButtonFrames, buttonClick_showInstructionsP1, -1, -1, 'Previous', 32));
 
   panel_gameInstructionsP2.allButtons.push(pGameInstructions_button_Close);
 
@@ -477,6 +481,33 @@ function loadResources()
     , 'All Turrets require electricity to work - \nUse Buildings like Solar Panels to generate electricity', 20));
   panel_gameInstructionsP2.allButtons.push(new GuiButton(0, 0, 0, 0, -20, 0, 0, allButtonFrames, -1, -1, -1
     , 'Every Building conducts electricity slowly, \nbut to move it quickly you can connect your Buildings with Cables', 20));
+
+
+
+  //game credits
+  panel_gameCredits = new GuiPanel(0, 0, 0, 800, 800, allPanelFrames);
+  allInstructionPanels.push(panel_gameCredits);
+  panel_gameCredits.visible = false;
+  sceneMenu.allGuiPanels[6].push(panel_gameCredits);
+  var pGameCredits_button_Close = new GuiButton(0, 0, 0, 0, 100, 200, 100, allButtonFrames, buttonClick_hideCredits, -1, -1, 'Close', 32);
+  panel_gameCredits.allButtons.push(pGameCredits_button_Close);
+
+  panel_gameCredits.allButtons.push(new GuiButton(0, 0, 0, 0, -200, 0, 0, allButtonFrames, -1, -1, -1
+    , 'Programming', 20));
+  panel_gameCredits.allButtons.push(new GuiButton(0, 0, 0, 0, -180, 0, 0, allButtonFrames, -1, -1, -1
+    , 'Christopher Deane', 16));
+
+  panel_gameCredits.allButtons.push(new GuiButton(0, 0, 0, 0, -120, 0, 0, allButtonFrames, -1, -1, -1
+    , 'Art', 20));
+  panel_gameCredits.allButtons.push(new GuiButton(0, 0, 0, 0, -100, 0, 0, allButtonFrames, -1, -1, -1
+    , 'Chris so far...', 16));
+
+  panel_gameCredits.allButtons.push(new GuiButton(0, 0, 0, 0, -40, 0, 0, allButtonFrames, -1, -1, -1
+    , 'Music', 20));
+  panel_gameCredits.allButtons.push(new GuiButton(0, 0, 0, 0, -20, 0, 0, allButtonFrames, -1, -1, -1
+    , 'Battle Theme by Martin Opsahl at https://opengameart.org/content/battle-theme-ii', 16));
+  panel_gameCredits.allButtons.push(new GuiButton(0, 0, 0, 0, -20 + 15, 0, 0, allButtonFrames, -1, -1, -1
+    , 'The Looming Batttle by Johan Jansen at https://opengameart.org/content/orchestral-battle-music', 16));
 
 }
 
@@ -777,7 +808,7 @@ function openNewScene(s_id) {
 
     case 1://game
       gameMusic.setVolume(0.1);
-      //gameMusic.play();
+      gameMusic.play();
       gameMusic.setLoop(true);
     break;
 
@@ -1275,6 +1306,14 @@ var buttonClick_selectGameInstance05 = function (button) {
 var buttonClick_openMenu = function (button) {
   openNewScene(0);
 
+}
+
+var buttonClick_showCredits = function (button) {
+  panel_gameCredits.visible = true;
+}
+
+var buttonClick_hideCredits = function (button) {
+  panel_gameCredits.visible = false;
 }
 
 var buttonClick_showInstructionsP1 = function (button) {

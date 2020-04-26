@@ -1,0 +1,24 @@
+Material Name: Battle Theme II v1.2
+Website: OpenGameArt.org
+Creator User Name: Mega Pixel Music Lab
+Creator Name: Martin Opsahl
+Creator link: https://opengameart.org/users/mega-pixel-music-lab
+Source link: https://opengameart.org/content/battle-theme-ii
+
+Licenses: 
+CC-BY 3.0 : https://creativecommons.org/licenses/by/3.0/
+CC-BY-SA 3.0: https://creativecommons.org/licenses/by-sa/3.0/
+GPL 3.0 : http://www.gnu.org/licenses/gpl-3.0.html
+GPL 2.0 : http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+
+Conditions of use: 
+1. State name of creator
+2. Link to source of material
+3. State any changes that were made
+4. Do not apear to be endorsed by creator
+5. Do not apply new legal restrictions on content
+6. Publish each copy with an appropriate copyright notice
+7. Keep intact all notices stating this license
+8. State any warranty or lack of warranty for the material
+
+9. If any changes are made to this material it still be distrubuted under the same license
