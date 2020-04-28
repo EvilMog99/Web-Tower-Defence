@@ -127,6 +127,7 @@ var scrnWidthOutput;
 var scrnHeightOutput;
 var panel_selectGameInstance_StartButton;
 var panel_selectGameInstance;
+var panel_gameStats;
 
 //work out the start and end index of tiles to draw to the screen
 var maxX;
@@ -326,7 +327,7 @@ function loadResources()
   //setup game resources panel
   var spacingX = 0;
   var spacingY = 0;
-  var panel_gameStats = new GuiPanel(0, 0, -325, 900, 50, allPanelFrames);
+  panel_gameStats = new GuiPanel(0, 0, -325, 900, 50, allPanelFrames);
   sceneGame.allGuiPanels[5].push(panel_gameStats);
   spacingX = -450;
   playerPositionOutput = new GuiButton(0, 0, 0, spacingX + 60, 40, 100, 100, allButtonFrames, -1, -1, -1, '', 20);//button for position output
@@ -539,6 +540,13 @@ function createBuildingButton(spaceX, spaceY, posIndex, textureIndex, buildingIn
 
 function setCanvas() {
   mainCanvas = createCanvas(canvasWidth, canvasHeight, WEBGL);
+
+  //set GUI
+  panel_gameStats.width = canvasWidth;
+  panel_gameStats.x = 450 - (canvasWidth / 2);
+  panel_gameStats.y = -(canvasHeight / 2) + 25;
+
+  panel_gameMenu.height = canvasHeight;
 }
 
 function setup()

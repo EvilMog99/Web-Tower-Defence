@@ -691,24 +691,26 @@ class GameInstance {
             else if (projId == 2) {
               //if it is an ore?
               var pl = this.getPlayerByIdCode(tile.buildingOwner);
-              if ((tempTile.buildingId == 6 && this.testOreIsRequired(0, pl))
-                  || (tempTile.buildingId == 7 && this.testOreIsRequired(1, pl))
-                  || (tempTile.buildingId == 8  && this.testOreIsRequired(2, pl))
-                  || (tempTile.buildingId == 9 && this.testOreIsRequired(3, pl))
-                  || (tempTile.buildingId == 10 && this.testOreIsRequired(4, pl))) {
-                targetX = x;
-                targetY = y;
-                foundTarget = true;
-              }
-              else if (!foundTarget &&
-                  (tempTile.buildingId == 6 && this.testOreCanBeCollected(0, pl)
-                  || (tempTile.buildingId == 7 && this.testOreIsRequired(1, pl))
-                  || (tempTile.buildingId == 8  && this.testOreIsRequired(2, pl))
-                  || (tempTile.buildingId == 9 && this.testOreIsRequired(3, pl))
-                  || (tempTile.buildingId == 10 && this.testOreIsRequired(4, pl)))) {
-                targetX = x;
-                targetY = y;
-                foundLessaTarget = true;
+              if (pl) {
+                if ((tempTile.buildingId == 6 && this.testOreIsRequired(0, pl))
+                    || (tempTile.buildingId == 7 && this.testOreIsRequired(1, pl))
+                    || (tempTile.buildingId == 8  && this.testOreIsRequired(2, pl))
+                    || (tempTile.buildingId == 9 && this.testOreIsRequired(3, pl))
+                    || (tempTile.buildingId == 10 && this.testOreIsRequired(4, pl))) {
+                  targetX = x;
+                  targetY = y;
+                  foundTarget = true;
+                }
+                else if (!foundTarget &&
+                    (tempTile.buildingId == 6 && this.testOreCanBeCollected(0, pl)
+                    || (tempTile.buildingId == 7 && this.testOreIsRequired(1, pl))
+                    || (tempTile.buildingId == 8  && this.testOreIsRequired(2, pl))
+                    || (tempTile.buildingId == 9 && this.testOreIsRequired(3, pl))
+                    || (tempTile.buildingId == 10 && this.testOreIsRequired(4, pl)))) {
+                  targetX = x;
+                  targetY = y;
+                  foundLessaTarget = true;
+                }
               }
             }
           }
@@ -1197,7 +1199,9 @@ class Tile {
 
     //if this is an important building set its buildingAnimation to show the owner's flag
     if (this.buildingId == 0 || this.buildingId == 1 || this.buildingId == 2) {
-      this.buildingFlagId = this.gameInstance.getPlayerByIdCode(this.buildingOwner).flagId;
+      var pl = this.gameInstance.getPlayerByIdCode(this.buildingOwner);
+      if (pl) this.buildingFlagId = pl.flagId;
+      else this.buildingFlagId = -1;//set no building flag
     }
     else {
       this.buildingFlagId = -1;//set no building flag
